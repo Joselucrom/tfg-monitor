@@ -6,9 +6,10 @@ from app.database import get_db
 from app.models import Usuario
 from app.core.security import verify_password, create_access_token, decode_token
 from pydantic import BaseModel
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+security = HTTPBearer()
 
 
 class Token(BaseModel):
@@ -36,9 +37,10 @@ async def login(
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> Usuario:
+    token = credentials.credentials
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")

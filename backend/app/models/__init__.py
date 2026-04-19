@@ -55,7 +55,7 @@ class Usuario(Base):
     nombre        : Mapped[str]        = mapped_column(String(100), nullable=False)
     email         : Mapped[str]        = mapped_column(String(150), unique=True, nullable=False)
     password_hash : Mapped[str]        = mapped_column(String(255), nullable=False)
-    rol           : Mapped[RolUsuario] = mapped_column(Enum(RolUsuario), default=RolUsuario.operador)
+    rol           : Mapped[RolUsuario] = mapped_column(Enum(RolUsuario, name="rol_usuario"), default=RolUsuario.operador)
     activo        : Mapped[bool]       = mapped_column(Boolean, default=True)
     created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -102,9 +102,13 @@ class Regla(Base):
     usuario_id : Mapped[uuid.UUID]        = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"))
     nombre     : Mapped[str]              = mapped_column(String(150), nullable=False)
     metrica    : Mapped[str]              = mapped_column(String(50), nullable=False)
-    operador   : Mapped[OperadorRegla]    = mapped_column(Enum(OperadorRegla))
+    operador: Mapped[OperadorRegla] = mapped_column(
+    Enum(OperadorRegla, name="operador_regla", values_callable=lambda x: [e.value for e in x])
+    )
     umbral     : Mapped[float]            = mapped_column(Float, nullable=False)
-    severidad  : Mapped[SeveridadAlerta]  = mapped_column(Enum(SeveridadAlerta), default=SeveridadAlerta.warning)
+    severidad: Mapped[SeveridadAlerta] = mapped_column(
+    Enum(SeveridadAlerta, name="severidad_alerta"), default=SeveridadAlerta.warning
+    )
     activa     : Mapped[bool]             = mapped_column(Boolean, default=True)
     created_at : Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -125,7 +129,9 @@ class Evento(Base):
     id              : Mapped[uuid.UUID]       = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sistema_id      : Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sistemas.id", ondelete="SET NULL"))
     servicio_web_id : Mapped[uuid.UUID | None] = mapped_column(ForeignKey("servicios_web.id", ondelete="SET NULL"))
-    tipo            : Mapped[TipoEvento]       = mapped_column(Enum(TipoEvento), nullable=False)
+    tipo: Mapped[TipoEvento] = mapped_column(
+    Enum(TipoEvento, name="tipo_evento"), nullable=False
+    )
     valor           : Mapped[float | None]     = mapped_column(Float)
     origen          : Mapped[str | None]       = mapped_column(String(100))
     timestamp = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -141,7 +147,9 @@ class Alerta(Base):
     id          : Mapped[uuid.UUID]        = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     evento_id   : Mapped[uuid.UUID]        = mapped_column(ForeignKey("eventos.id", ondelete="CASCADE"))
     regla_id    : Mapped[uuid.UUID]        = mapped_column(ForeignKey("reglas.id", ondelete="CASCADE"))
-    severidad   : Mapped[SeveridadAlerta]  = mapped_column(Enum(SeveridadAlerta), nullable=False)
+    severidad: Mapped[SeveridadAlerta] = mapped_column(
+    Enum(SeveridadAlerta, name="severidad_alerta"), nullable=False
+    )
     mensaje     : Mapped[str]              = mapped_column(Text, nullable=False)
     resuelta    : Mapped[bool]             = mapped_column(Boolean, default=False)
     timestamp = mapped_column(DateTime(timezone=True), server_default=func.now())
