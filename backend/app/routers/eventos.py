@@ -1,107 +1,182 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from uuid import UUID
+from sqlalchemy import select, text
+from uuid import UUID, uuid4
 from datetime import datetime
 
 from app.database import get_db
-from app.models import Evento, Alerta, Regla, Recomendacion, Sistema, ServicioWeb
-from app.schemas import EventoCreate, EventoOut, AlertaOut
+from app.models import Alerta, Regla, Recomendacion, AlertaRecomendacion, Sistema
+from app.schemas import (
+    EventoSistemaCreate, EventoWebCreate,
+    EventoSistemaOut, EventoWebOut,
+)
 from app.routers.auth import get_current_user
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[EventoOut])
-async def listar_eventos(
-    limite: int = Query(100, le=500),
+@router.get("/sistema", response_model=list[EventoSistemaOut])
+async def listar_eventos_sistema(
     sistema_id: UUID | None = None,
+    limite: int = Query(100, le=500),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Lista los últimos eventos. Filtra por sistema si se indica."""
-    q = select(Evento).order_by(Evento.timestamp.desc()).limit(limite)
-    if sistema_id:
-        q = q.where(Evento.sistema_id == sistema_id)
-    result = await db.execute(q)
-    return result.scalars().all()
+    where = "WHERE sistema_id = :sid" if sistema_id else ""
+    params = {"sid": sistema_id, "lim": limite}
+    result = await db.execute(
+        text(f"""
+            SELECT id, sistema_id, tipo, valor, origen, proceso, pid, timestamp
+            FROM eventos_sistema
+            {where}
+            ORDER BY timestamp DESC
+            LIMIT :lim
+        """), params
+    )
+    rows = result.mappings().all()
+    return [dict(r) for r in rows]
 
 
-@router.post("/", response_model=EventoOut, status_code=201)
-async def recibir_evento(
-    datos: EventoCreate,
+@router.get("/web", response_model=list[EventoWebOut])
+async def listar_eventos_web(
+    servicio_web_id: UUID | None = None,
+    limite: int = Query(100, le=500),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    where = "WHERE servicio_web_id = :sid" if servicio_web_id else ""
+    params = {"sid": servicio_web_id, "lim": limite}
+    result = await db.execute(
+        text(f"""
+            SELECT id, servicio_web_id, tipo, valor, origen, http_status, tiempo_ms, timestamp
+            FROM eventos_web
+            {where}
+            ORDER BY timestamp DESC
+            LIMIT :lim
+        """), params
+    )
+    rows = result.mappings().all()
+    return [dict(r) for r in rows]
+
+
+@router.post("/sistema", response_model=EventoSistemaOut, status_code=201)
+async def recibir_evento_sistema(
+    datos: EventoSistemaCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Endpoint público para que el agente envíe eventos.
-    No requiere autenticación JWT para facilitar el envío desde el agente.
-    En producción se añadiría autenticación por API key.
-    """
-    evento = Evento(**datos.model_dump())
-    db.add(evento)
-    await db.flush()  # obtenemos el ID sin hacer commit aún
+    evento_id = uuid4()
+    now = datetime.utcnow()
 
-    # ── Motor de reglas ───────────────────────────────────
-    await _evaluar_reglas(db, evento)
+    await db.execute(text("""
+        INSERT INTO eventos_sistema
+            (id, tipo, valor, origen, metadata, timestamp, sistema_id, proceso, pid)
+        VALUES
+            (:id, :tipo, :valor, :origen, :metadata, :timestamp, :sistema_id, :proceso, :pid)
+    """), {
+        "id":         evento_id,
+        "tipo":       datos.tipo.value,
+        "valor":      datos.valor,
+        "origen":     datos.origen,
+        "metadata":   json.dumps(datos.metadata) if datos.metadata else None,
+        "timestamp":  now,
+        "sistema_id": datos.sistema_id,
+        "proceso":    datos.proceso,
+        "pid":        datos.pid,
+    })
 
-    # Actualizar ultimo_contacto del sistema si aplica
-    if evento.sistema_id:
-        result = await db.execute(
-            select(Sistema).where(Sistema.id == evento.sistema_id)
-        )
-        sistema = result.scalar_one_or_none()
-        if sistema:
-            sistema.ultimo_contacto = datetime.utcnow()
+    await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen)
+
+    result = await db.execute(select(Sistema).where(Sistema.id == datos.sistema_id))
+    sistema = result.scalar_one_or_none()
+    if sistema:
+        sistema.ultimo_contacto = now
 
     await db.commit()
-    await db.refresh(evento)
-    return evento
+
+    return {
+        "id":         evento_id,
+        "sistema_id": datos.sistema_id,
+        "tipo":       datos.tipo,
+        "valor":      datos.valor,
+        "origen":     datos.origen,
+        "proceso":    datos.proceso,
+        "pid":        datos.pid,
+        "timestamp":  now,
+    }
 
 
-@router.get("/{evento_id}", response_model=EventoOut)
-async def obtener_evento(
-    evento_id: UUID,
+@router.post("/web", response_model=EventoWebOut, status_code=201)
+async def recibir_evento_web(
+    datos: EventoWebCreate,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
 ):
-    result = await db.execute(select(Evento).where(Evento.id == evento_id))
-    evento = result.scalar_one_or_none()
-    if not evento:
-        raise HTTPException(status_code=404, detail="Evento no encontrado")
-    return evento
+    evento_id = uuid4()
+    now = datetime.utcnow()
+
+    await db.execute(text("""
+        INSERT INTO eventos_web
+            (id, tipo, valor, origen, metadata, timestamp, servicio_web_id, http_status, tiempo_ms)
+        VALUES
+            (:id, :tipo, :valor, :origen, :metadata, :timestamp, :servicio_web_id, :http_status, :tiempo_ms)
+    """), {
+        "id":              evento_id,
+        "tipo":            datos.tipo.value,
+        "valor":           datos.valor,
+        "origen":          datos.origen,
+        "metadata":        json.dumps(datos.metadata) if datos.metadata else None,
+        "timestamp":       now,
+        "servicio_web_id": datos.servicio_web_id,
+        "http_status":     datos.http_status,
+        "tiempo_ms":       datos.tiempo_ms,
+    })
+
+    await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen)
+    await db.commit()
+
+    return {
+        "id":              evento_id,
+        "servicio_web_id": datos.servicio_web_id,
+        "tipo":            datos.tipo,
+        "valor":           datos.valor,
+        "origen":          datos.origen,
+        "http_status":     datos.http_status,
+        "tiempo_ms":       datos.tiempo_ms,
+        "timestamp":       now,
+    }
 
 
-# ── Motor de reglas ───────────────────────────────────────
-
-async def _evaluar_reglas(db: AsyncSession, evento: Evento) -> None:
-    """
-    Evalúa todas las reglas activas contra el evento recibido.
-    Si alguna se cumple, genera una Alerta y asocia recomendaciones.
-    """
-    if evento.valor is None:
+async def _evaluar_reglas_raw(
+    db: AsyncSession,
+    evento_id: UUID,
+    tipo: str,
+    valor: float | None,
+    origen: str | None,
+) -> None:
+    if valor is None:
         return
 
     result = await db.execute(
-        select(Regla).where(
-            Regla.activa == True,
-            Regla.metrica == evento.tipo.value,
-        )
+        select(Regla).where(Regla.activa == True, Regla.metrica == tipo)
     )
     reglas = result.scalars().all()
 
     for regla in reglas:
-        if _cumple_condicion(evento.valor, regla.operador.value, regla.umbral):
+        if _cumple_condicion(valor, regla.operador.value, regla.umbral):
             alerta = Alerta(
-                evento_id=evento.id,
-                regla_id=regla.id,
-                severidad=regla.severidad,
-                mensaje=_generar_mensaje(evento, regla),
+                evento_id = evento_id,
+                regla_id  = regla.id,
+                severidad = regla.severidad,
+                mensaje   = (
+                    f"[{regla.severidad.value.upper()}] {regla.nombre}: "
+                    f"{tipo} = {valor} "
+                    f"(umbral {regla.operador.value} {regla.umbral})"
+                    f" — origen: {origen or 'desconocido'}"
+                ),
             )
             db.add(alerta)
             await db.flush()
-
-            # Asociar recomendaciones del catálogo
-            await _asociar_recomendaciones(db, alerta, evento.tipo.value)
+            await _asociar_recomendaciones(db, alerta, tipo)
 
 
 def _cumple_condicion(valor: float, operador: str, umbral: float) -> bool:
@@ -114,28 +189,17 @@ def _cumple_condicion(valor: float, operador: str, umbral: float) -> bool:
         case _:    return False
 
 
-def _generar_mensaje(evento: Evento, regla: Regla) -> str:
-    return (
-        f"[{regla.severidad.value.upper()}] {regla.nombre}: "
-        f"{evento.tipo.value} = {evento.valor} "
-        f"(umbral {regla.operador.value} {regla.umbral})"
-        f" — origen: {evento.origen or 'desconocido'}"
-    )
-
-
 async def _asociar_recomendaciones(
     db: AsyncSession, alerta: Alerta, tipo_alerta: str
 ) -> None:
-    from app.models import alertas_recomendaciones  # importación local para evitar circular
     result = await db.execute(
-        select(Recomendacion).where(Recomendacion.tipo_alerta == tipo_alerta)
+        select(Recomendacion)
+        .where(Recomendacion.tipo_alerta == tipo_alerta)
         .order_by(Recomendacion.prioridad)
     )
-    recomendaciones = result.scalars().all()
-    for rec in recomendaciones:
-        await db.execute(
-            alertas_recomendaciones.insert().values(
-                alerta_id=alerta.id,
-                recomendacion_id=rec.id,
-            )
-        )
+    for rec in result.scalars().all():
+        db.add(AlertaRecomendacion(
+            alerta_id        = alerta.id,
+            recomendacion_id = rec.id,
+            aplicada         = False,
+        ))

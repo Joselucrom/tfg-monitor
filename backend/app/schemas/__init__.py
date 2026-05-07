@@ -1,21 +1,26 @@
 """
-Schemas Pydantic — validación de entrada/salida de la API.
+Schemas Pydantic v2 — validación de entrada/salida de la API.
 Separados de los modelos SQLAlchemy para mantener la arquitectura limpia.
+Refleja la herencia de Evento y la clase de asociación AlertaRecomendacion.
 """
-from pydantic import BaseModel, EmailStr, HttpUrl, field_validator
-from typing import Optional
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
+from typing import Optional, Any
 from datetime import datetime
 from uuid import UUID
 from app.models import RolUsuario, OperadorRegla, SeveridadAlerta, TipoEvento
 
 
-# ── Utilidad base ─────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Base
+# ══════════════════════════════════════════════════════════
 
 class BaseSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── Usuario ───────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Usuario
+# ══════════════════════════════════════════════════════════
 
 class UsuarioCreate(BaseModel):
     nombre: str
@@ -33,7 +38,9 @@ class UsuarioOut(BaseSchema):
     created_at: datetime
 
 
-# ── Sistema ───────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Sistema
+# ══════════════════════════════════════════════════════════
 
 class SistemaCreate(BaseModel):
     nombre: str
@@ -58,11 +65,41 @@ class SistemaOut(BaseSchema):
     created_at: datetime
 
 
-# ── ServicioWeb ───────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# MetricaSnapshot
+# ══════════════════════════════════════════════════════════
+
+class MetricaSnapshotCreate(BaseModel):
+    """El agente envía este payload al registrar métricas."""
+    sistema_id:    UUID
+    cpu_percent:   float
+    ram_percent:   float
+    disco_percent: float
+
+    @field_validator("cpu_percent", "ram_percent", "disco_percent")
+    @classmethod
+    def porcentaje_valido(cls, v: float) -> float:
+        if not 0.0 <= v <= 100.0:
+            raise ValueError("El porcentaje debe estar entre 0 y 100")
+        return v
+
+
+class MetricaSnapshotOut(BaseSchema):
+    id:            UUID
+    sistema_id:    UUID
+    cpu_percent:   float
+    ram_percent:   float
+    disco_percent: float
+    timestamp:     datetime
+
+
+# ══════════════════════════════════════════════════════════
+# ServicioWeb
+# ══════════════════════════════════════════════════════════
 
 class ServicioWebCreate(BaseModel):
-    nombre: str
-    url: str
+    nombre:      str
+    url:         str
     intervalo_s: int = 60
 
     @field_validator("intervalo_s")
@@ -74,98 +111,203 @@ class ServicioWebCreate(BaseModel):
 
 
 class ServicioWebUpdate(BaseModel):
-    nombre: Optional[str] = None
-    url: Optional[str] = None
-    intervalo_s: Optional[int] = None
-    activo: Optional[bool] = None
+    nombre:      Optional[str]  = None
+    url:         Optional[str]  = None
+    intervalo_s: Optional[int]  = None
+    activo:      Optional[bool] = None
 
 
 class ServicioWebOut(BaseSchema):
-    id: UUID
-    nombre: str
-    url: str
+    id:          UUID
+    nombre:      str
+    url:         str
     intervalo_s: int
-    activo: bool
-    created_at: datetime
+    activo:      bool
+    created_at:  datetime
 
 
-# ── Regla ─────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Regla
+# ══════════════════════════════════════════════════════════
 
 class ReglaCreate(BaseModel):
-    nombre: str
-    metrica: str
-    operador: OperadorRegla
-    umbral: float
+    nombre:    str
+    metrica:   str
+    operador:  OperadorRegla
+    umbral:    float
     severidad: SeveridadAlerta = SeveridadAlerta.warning
 
 
+class ReglaUpdate(BaseModel):
+    nombre:    Optional[str]            = None
+    metrica:   Optional[str]            = None
+    operador:  Optional[OperadorRegla]  = None
+    umbral:    Optional[float]          = None
+    severidad: Optional[SeveridadAlerta] = None
+    activa:    Optional[bool]           = None
+
+
 class ReglaOut(BaseSchema):
-    id: UUID
-    nombre: str
-    metrica: str
-    operador: OperadorRegla
-    umbral: float
+    id:        UUID
+    nombre:    str
+    metrica:   str
+    operador:  OperadorRegla
+    umbral:    float
     severidad: SeveridadAlerta
-    activa: bool
+    activa:    bool
     created_at: datetime
 
 
-# ── Evento ────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Eventos — herencia reflejada en schemas
+# ══════════════════════════════════════════════════════════
 
-class EventoCreate(BaseModel):
-    sistema_id: Optional[UUID] = None
-    servicio_web_id: Optional[UUID] = None
-    tipo: TipoEvento
-    valor: Optional[float] = None
-    origen: Optional[str] = None
+class EventoSistemaCreate(BaseModel):
+    """Payload que envía el agente para eventos de servidor."""
+    sistema_id: UUID
+    tipo:       TipoEvento
+    valor:      Optional[float]      = None
+    origen:     Optional[str]        = None
+    metadata:   Optional[dict]       = None
+    proceso:    Optional[str]        = None
+    pid:        Optional[int]        = None
 
-    @field_validator("servicio_web_id")
+    @field_validator("tipo")
     @classmethod
-    def validar_origen_exclusivo(cls, v, info):
-        if v is not None and info.data.get("sistema_id") is not None:
-            raise ValueError("Un evento no puede tener sistema_id y servicio_web_id a la vez")
+    def tipo_valido_sistema(cls, v: TipoEvento) -> TipoEvento:
+        tipos_sistema = {
+            TipoEvento.cpu_alta,
+            TipoEvento.ram_alta,
+            TipoEvento.disco_alto,
+            TipoEvento.login_fallido,
+            TipoEvento.agente_caido,
+            TipoEvento.otro,
+        }
+        if v not in tipos_sistema:
+            raise ValueError(f"Tipo '{v}' no es válido para EventoSistema")
         return v
 
 
-class EventoOut(BaseSchema):
-    id: UUID
-    sistema_id: Optional[UUID]
-    servicio_web_id: Optional[UUID]
-    tipo: TipoEvento
-    valor: Optional[float]
-    origen: Optional[str]
-    timestamp: datetime
+class EventoWebCreate(BaseModel):
+    """Payload para eventos de servicios web monitorizados."""
+    servicio_web_id: UUID
+    tipo:            TipoEvento
+    valor:           Optional[float] = None
+    origen:          Optional[str]   = None
+    metadata:        Optional[dict]  = None
+    http_status:     Optional[int]   = None
+    tiempo_ms:       Optional[int]   = None
+
+    @field_validator("tipo")
+    @classmethod
+    def tipo_valido_web(cls, v: TipoEvento) -> TipoEvento:
+        tipos_web = {TipoEvento.http_down, TipoEvento.http_lento, TipoEvento.otro}
+        if v not in tipos_web:
+            raise ValueError(f"Tipo '{v}' no es válido para EventoWeb")
+        return v
 
 
-# ── Alerta ────────────────────────────────────────────────
+class EventoSistemaOut(BaseSchema):
+    id:         UUID
+    sistema_id: UUID
+    tipo:       TipoEvento
+    valor:      Optional[float]
+    origen:     Optional[str]
+    proceso:    Optional[str]
+    pid:        Optional[int]
+    timestamp:  datetime
+
+
+class EventoWebOut(BaseSchema):
+    id:              UUID
+    servicio_web_id: UUID
+    tipo:            TipoEvento
+    valor:           Optional[float]
+    origen:          Optional[str]
+    http_status:     Optional[int]
+    tiempo_ms:       Optional[int]
+    timestamp:       datetime
+
+
+# ══════════════════════════════════════════════════════════
+# AlertaRecomendacion — clase de asociación con atributos
+# ══════════════════════════════════════════════════════════
+
+class AlertaRecomendacionOut(BaseSchema):
+    alerta_id:        UUID
+    recomendacion_id: UUID
+    aplicada:         bool
+    aplicada_at:      Optional[datetime]
+
+
+class AlertaRecomendacionUpdate(BaseModel):
+    """Para marcar una recomendación como aplicada."""
+    aplicada: bool
+
+
+# ══════════════════════════════════════════════════════════
+# Alerta
+# ══════════════════════════════════════════════════════════
 
 class AlertaOut(BaseSchema):
-    id: UUID
-    evento_id: UUID
-    regla_id: UUID
-    severidad: SeveridadAlerta
-    mensaje: str
-    resuelta: bool
-    timestamp: datetime
+    id:          UUID
+    evento_id:   UUID
+    regla_id:    UUID
+    severidad:   SeveridadAlerta
+    mensaje:     str
+    resuelta:    bool
+    timestamp:   datetime
     resuelta_at: Optional[datetime]
 
 
-# ── Recomendación ─────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Recomendacion
+# ══════════════════════════════════════════════════════════
 
 class RecomendacionOut(BaseSchema):
-    id: UUID
+    id:          UUID
     tipo_alerta: str
-    texto: str
-    prioridad: int
+    texto:       str
+    prioridad:   int
 
 
-# ── Auth ──────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════
+# Admin — schemas para endpoints exclusivos del admin
+# ══════════════════════════════════════════════════════════
+
+class EstadisticasGlobales(BaseSchema):
+    """Resumen global de uso de la plataforma."""
+    total_usuarios:      int
+    total_sistemas:      int
+    total_servicios_web: int
+    total_alertas:       int
+    alertas_pendientes:  int
+    total_eventos_hoy:   int
+
+
+class SistemaTop(BaseSchema):
+    """Sistema con más eventos generados."""
+    sistema_id:   UUID
+    nombre:       str
+    total_eventos: int
+
+
+class ReglaTop(BaseSchema):
+    """Regla que más alertas ha disparado."""
+    regla_id:      UUID
+    nombre:        str
+    total_alertas: int
+
+
+# ══════════════════════════════════════════════════════════
+# Auth
+# ══════════════════════════════════════════════════════════
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    token_type:   str
 
 
 class TokenData(BaseModel):
     user_id: UUID
-    rol: RolUsuario
+    rol:     RolUsuario

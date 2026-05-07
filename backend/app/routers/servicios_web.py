@@ -61,6 +61,25 @@ async def eliminar_servicio(
     await db.commit()
 
 
+@router.get("/buscar", response_model=ServicioWebOut)
+async def buscar_por_url(
+    url: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    El agente usa este endpoint para obtener el UUID
+    de un servicio web a partir de su URL.
+    No requiere JWT.
+    """
+    result = await db.execute(
+        select(ServicioWeb).where(ServicioWeb.url == url, ServicioWeb.activo == True)
+    )
+    servicio = result.scalar_one_or_none()
+    if not servicio:
+        raise HTTPException(status_code=404, detail="Servicio web no encontrado")
+    return servicio
+
+
 async def _get_or_404(db, servicio_id, usuario_id):
     result = await db.execute(
         select(ServicioWeb).where(
