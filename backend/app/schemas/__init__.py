@@ -238,6 +238,9 @@ class AlertaRecomendacionOut(BaseSchema):
     recomendacion_id: UUID
     aplicada:         bool
     aplicada_at:      Optional[datetime]
+    texto:            Optional[str] = None
+    tipo_alerta:      Optional[str] = None
+    prioridad:        Optional[int] = None
 
 
 class AlertaRecomendacionUpdate(BaseModel):

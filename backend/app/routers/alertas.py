@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Alerta, Recomendacion, AlertaRecomendacion
@@ -58,7 +58,7 @@ async def resolver_alerta(
     if alerta.resuelta:
         raise HTTPException(status_code=400, detail="La alerta ya está resuelta")
     alerta.resuelta    = True
-    alerta.resuelta_at = datetime.utcnow()
+    alerta.resuelta_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(alerta)
     return alerta
@@ -77,17 +77,26 @@ async def obtener_recomendaciones(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """
-    Devuelve las recomendaciones asociadas a una alerta,
-    incluyendo si han sido aplicadas (clase de asociación).
-    """
     await _get_or_404(db, alerta_id)
     result = await db.execute(
-        select(AlertaRecomendacion)
+        select(AlertaRecomendacion, Recomendacion)
+        .join(Recomendacion, AlertaRecomendacion.recomendacion_id == Recomendacion.id)
         .where(AlertaRecomendacion.alerta_id == alerta_id)
-        .order_by(AlertaRecomendacion.recomendacion_id)
+        .order_by(Recomendacion.prioridad)
     )
-    return result.scalars().all()
+    rows = result.all()
+    return [
+        {
+            "alerta_id":        ar.alerta_id,
+            "recomendacion_id": ar.recomendacion_id,
+            "aplicada":         ar.aplicada,
+            "aplicada_at":      ar.aplicada_at,
+            "texto":            rec.texto,
+            "tipo_alerta":      rec.tipo_alerta,
+            "prioridad":        rec.prioridad,
+        }
+        for ar, rec in rows
+    ]
 
 
 @router.get(
@@ -122,7 +131,7 @@ async def marcar_recomendacion(
     """
     ar = await _get_ar_or_404(db, alerta_id, recomendacion_id)
     ar.aplicada = datos.aplicada
-    ar.aplicada_at = datetime.utcnow() if datos.aplicada else None
+    ar.aplicada_at = datetime.now(timezone.utc) if datos.aplicada else None
     await db.commit()
     await db.refresh(ar)
     return ar
