@@ -184,7 +184,10 @@ function ModalRegla({ regla, onClose, onGuardado }) {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Umbral * {form.metrica === 'login_fallido' ? '(intentos)' : '(%)'}
+                  Umbral * {
+                    form.metrica === 'login_fallido' ? '(intentos)' :
+                    form.metrica === 'http_lento'    ? '(ms)'       : '(%)'
+                  }
                 </label>
                 <input
                   type="number"
