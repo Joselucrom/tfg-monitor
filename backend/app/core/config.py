@@ -14,5 +14,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
-
+    gemini_api_key: str = ""
+    
 settings = Settings()

@@ -10,7 +10,9 @@ from app.schemas import (
     AlertaOut, RecomendacionOut,
     AlertaRecomendacionOut, AlertaRecomendacionUpdate,
 )
+
 from app.routers.auth import get_current_user
+from app.core.gemini import analizar_alerta
 
 router = APIRouter()
 
@@ -135,6 +137,56 @@ async def marcar_recomendacion(
     await db.commit()
     await db.refresh(ar)
     return ar
+
+
+@router.get("/{alerta_id}/gemini")
+async def analisis_gemini(
+    alerta_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Genera un análisis dinámico de la alerta usando Gemini.
+    Se llama cuando el admin abre el detalle de una alerta.
+    """
+    alerta = await _get_or_404(db, alerta_id)
+
+    # Obtener el evento asociado para tener más contexto
+    from sqlalchemy import text
+    result = await db.execute(
+        text("""
+            SELECT tipo, valor, origen, sistema_id
+            FROM eventos_sistema
+            WHERE id = :id
+            UNION ALL
+            SELECT tipo, valor, origen, null as sistema_id
+            FROM eventos_web
+            WHERE id = :id
+        """),
+        {"id": alerta.evento_id}
+    )
+    evento = result.mappings().first()
+
+    # Obtener nombre del sistema si existe
+    nombre_sistema = None
+    if evento and evento.get("sistema_id"):
+        from app.models import Sistema
+        res = await db.execute(
+            select(Sistema).where(Sistema.id == evento["sistema_id"])
+        )
+        sistema = res.scalar_one_or_none()
+        if sistema:
+            nombre_sistema = sistema.nombre
+
+    analisis = await analizar_alerta(
+        tipo_evento    = evento["tipo"]  if evento else "otro",
+        valor          = evento["valor"] if evento else None,
+        severidad      = alerta.severidad.value,
+        mensaje        = alerta.mensaje,
+        nombre_sistema = nombre_sistema,
+    )
+
+    return analisis
 
 
 # ══════════════════════════════════════════════════════════

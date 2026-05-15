@@ -31,6 +31,9 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
   const [recs,    setRecs]    = useState([])
   const [loading, setLoading] = useState(false)
   const [resolviendo, setResolviendo] = useState(false)
+  const [gemini,         setGemini]         = useState(null)
+  const [loadingGemini,  setLoadingGemini]  = useState(false)
+  const [geminiError,    setGeminiError]    = useState(null)
 
   useEffect(() => {
     cargarRecomendaciones()
@@ -42,6 +45,19 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
       setRecs(data)
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  async function llamarGemini() {
+    setLoadingGemini(true)
+    setGeminiError(null)
+    try {
+      const { data } = await client.get(`/api/alertas/${alerta.id}/gemini`)
+      setGemini(data)
+    } catch (err) {
+      setGeminiError('No se pudo obtener el análisis de Gemini.')
+    } finally {
+      setLoadingGemini(false)
     }
   }
 
@@ -152,6 +168,93 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
           <p className="text-xs text-gray-400 mb-1">Estado</p>
           <p className="text-sm text-gray-800">{alerta.resuelta ? `Resuelta ${tiempoRelativo(alerta.resuelta_at)}` : 'Pendiente'}</p>
         </div>
+      </div>
+
+      {/* Análisis de Gemini */}
+      <div className="border border-gray-200 rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-blue-50 flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="5" stroke="#3B82F6" strokeWidth="1"/>
+                <path d="M6 5v4M6 3v1" stroke="#3B82F6" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h2 className="text-sm font-medium text-gray-800">Análisis de Gemini</h2>
+          </div>
+          {!gemini && !loadingGemini && (
+            <button
+              onClick={llamarGemini}
+              className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg
+                        hover:bg-blue-700 transition-colors"
+            >
+              Generar análisis
+            </button>
+          )}
+          {gemini && (
+            <button
+              onClick={llamarGemini}
+              disabled={loadingGemini}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              ↻ Regenerar
+            </button>
+          )}
+        </div>
+
+        {!gemini && !loadingGemini && !geminiError && (
+          <p className="text-xs text-gray-400">
+            Haz click en "Generar análisis" para obtener un diagnóstico detallado con IA.
+          </p>
+        )}
+
+        {loadingGemini && (
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="w-3 h-3 border border-blue-400 border-t-transparent
+                            rounded-full animate-spin" />
+            Analizando con Gemini...
+          </div>
+        )}
+
+        {geminiError && (
+          <p className="text-xs text-red-500">{geminiError}</p>
+        )}
+
+        {gemini && !loadingGemini && (
+          <div className="space-y-3">
+            {gemini.analisis && (
+              <p className="text-sm text-gray-700 leading-relaxed">{gemini.analisis}</p>
+            )}
+
+            {gemini.causas?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1.5">Posibles causas</p>
+                <ul className="space-y-1">
+                  {gemini.causas.map((c, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-gray-600">
+                      <span className="text-gray-300 shrink-0">•</span>
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {gemini.acciones?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1.5">Acciones recomendadas</p>
+                <ul className="space-y-1">
+                  {gemini.acciones.map((a, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-gray-600">
+                      <span className="text-blue-400 shrink-0 font-medium">{i + 1}.</span>
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Recomendaciones */}
