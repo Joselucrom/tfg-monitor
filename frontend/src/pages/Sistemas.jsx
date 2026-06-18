@@ -14,6 +14,72 @@ function BadgeEstado({ sistema, snap }) {
   return <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">OK</span>
 }
 
+function ModalInstrucciones({ sistema, onClose }) {
+  const [copiado, setCopiado] = useState(false)
+  const comandos = `# 1. Activa el entorno virtual
+source .venv/bin/activate
+
+# 2. Configura las variables de entorno
+export SISTEMA_ID="${sistema.id}"
+export BACKEND_URL="http://TU-IP-BACKEND:8000"
+export INTERVALO=30
+export UMBRAL_CPU=85
+export UMBRAL_RAM=85
+export UMBRAL_DISCO=85
+
+# 3. Arranca el agente
+cd agente
+python agente.py`
+
+  function copiar() {
+    navigator.clipboard.writeText(comandos)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-lg shadow-lg">
+        <h2 className="text-base font-medium text-gray-900 mb-1">
+          Instrucciones de instalación del agente
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Ejecuta estos comandos en el servidor <strong>{sistema.nombre}</strong>
+        </p>
+
+        <div className="bg-gray-900 rounded-lg p-4 mb-4 relative">
+          <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre">
+            {comandos}
+          </pre>
+          <button
+            onClick={copiar}
+            className="absolute top-3 right-3 text-xs px-2 py-1 rounded
+                       bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+          >
+            {copiado ? '✓ Copiado' : 'Copiar'}
+          </button>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg px-3 py-2.5 mb-4">
+          <p className="text-xs text-blue-700">
+            Sustituye <code className="bg-blue-100 px-1 rounded">TU-IP-BACKEND</code> por
+            la IP del servidor donde corre el backend, o usa <code className="bg-blue-100 px-1 rounded">localhost</code> si
+            el agente corre en la misma máquina.
+          </p>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 border border-gray-200 rounded-lg text-sm
+                     text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function BarraMetrica({ valor, umbral = 85 }) {
   const color = valor >= umbral ? 'bg-red-400' : valor >= umbral * 0.8 ? 'bg-amber-400' : 'bg-green-400'
   return (
@@ -123,6 +189,7 @@ export default function Sistemas() {
   const [snapshots,  setSnapshots]  = useState({})
   const [loading,    setLoading]    = useState(true)
   const [modalAbrir, setModalAbrir] = useState(false)
+  const [modalInstrucciones, setModalInstrucciones] = useState(null)
 
   useEffect(() => {
     cargarSistemas()
@@ -256,6 +323,12 @@ export default function Sistemas() {
                           >
                             Eliminar
                           </button>
+                          <button
+                            onClick={() => setModalInstrucciones(s)}
+                            className="text-xs text-green-600 hover:underline"
+                          >
+                            Instalar agente
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -270,6 +343,12 @@ export default function Sistemas() {
           <ModalCrear
             onClose={() => setModalAbrir(false)}
             onCreado={cargarSistemas}
+          />
+        )}
+        {modalInstrucciones && (
+          <ModalInstrucciones
+            sistema={modalInstrucciones}
+            onClose={() => setModalInstrucciones(null)}
           />
         )}
       </div>

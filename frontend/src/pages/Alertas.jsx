@@ -34,6 +34,8 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
   const [gemini,         setGemini]         = useState(null)
   const [loadingGemini,  setLoadingGemini]  = useState(false)
   const [geminiError,    setGeminiError]    = useState(null)
+  const [toast,       setToast]       = useState(null)
+  const [aplicandoId, setAplicandoId] = useState(null)
 
   useEffect(() => {
     cargarRecomendaciones()
@@ -62,14 +64,20 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
   }
 
   async function marcarAplicada(recId, aplicada) {
+    setAplicandoId(recId)
     try {
       await client.patch(
         `/api/alertas/${alerta.id}/recomendaciones/${recId}`,
         { aplicada }
       )
-      cargarRecomendaciones()
+      await cargarRecomendaciones()
+      setToast(aplicada ? 'Recomendación marcada como aplicada' : 'Recomendación desmarcada')
+      setTimeout(() => setToast(null), 3000)
     } catch (err) {
-      console.error(err)
+      setToast('Error al actualizar la recomendación')
+      setTimeout(() => setToast(null), 3000)
+    } finally {
+      setAplicandoId(null)
     }
   }
 
@@ -284,16 +292,24 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
               >
                 <div className="flex justify-between items-start gap-3">
                   <p className="text-sm text-gray-700 flex-1">{rec.texto}</p>
-                  <button
-                    onClick={() => marcarAplicada(rec.recomendacion_id, !rec.aplicada)}
-                    className={`text-xs px-2 py-1 rounded shrink-0 transition-colors ${
-                      rec.aplicada
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    {rec.aplicada ? '✓ Aplicada' : 'Marcar aplicada'}
-                  </button>
+                    <button
+                      onClick={() => marcarAplicada(rec.recomendacion_id, !rec.aplicada)}
+                      disabled={aplicandoId === rec.recomendacion_id}
+                      className={`text-xs px-2 py-1 rounded shrink-0 transition-all duration-200 ${
+                        aplicandoId === rec.recomendacion_id
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : rec.aplicada
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'
+                      }`}
+                    >
+                      {aplicandoId === rec.recomendacion_id
+                        ? '...'
+                        : rec.aplicada
+                        ? '✓ Aplicada'
+                        : 'Marcar aplicada'
+                      }
+                    </button>
                 </div>
                 {rec.aplicada && rec.aplicada_at && (
                   <p className="text-xs text-green-600 mt-1">
@@ -305,6 +321,13 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
           </div>
         )}
       </div>
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white
+                        text-sm px-4 py-3 rounded-lg shadow-lg
+                        animate-fade-in transition-all duration-300">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

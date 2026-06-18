@@ -198,8 +198,14 @@ async def _asociar_recomendaciones(
         .order_by(Recomendacion.prioridad)
     )
     for rec in result.scalars().all():
-        db.add(AlertaRecomendacion(
-            alerta_id        = alerta.id,
-            recomendacion_id = rec.id,
-            aplicada         = False,
-        ))
+        # ON CONFLICT DO NOTHING evita duplicados si se llama dos veces
+        await db.execute(
+            text("""
+                INSERT INTO alertas_recomendaciones
+                    (alerta_id, recomendacion_id, aplicada)
+                VALUES
+                    (:alerta_id, :rec_id, false)
+                ON CONFLICT (alerta_id, recomendacion_id) DO NOTHING
+            """),
+            {"alerta_id": alerta.id, "rec_id": rec.id}
+        )

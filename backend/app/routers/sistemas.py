@@ -113,6 +113,25 @@ async def actualizar_sistema(
     await db.refresh(sistema)
     return sistema
 
+@router.patch("/{sistema_id}/ip")
+async def actualizar_ip(
+    sistema_id: UUID,
+    datos: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    El agente llama a este endpoint al arrancar para
+    registrar su IP automáticamente. No requiere JWT.
+    """
+    result = await db.execute(
+        select(Sistema).where(Sistema.id == sistema_id)
+    )
+    sistema = result.scalar_one_or_none()
+    if not sistema:
+        raise HTTPException(status_code=404, detail="Sistema no encontrado")
+    sistema.ip = datos.get("ip")
+    await db.commit()
+    return {"id": str(sistema_id), "ip": sistema.ip}
 
 # ══════════════════════════════════════════════════════════
 # Eliminar

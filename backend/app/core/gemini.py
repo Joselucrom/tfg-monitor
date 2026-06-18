@@ -12,11 +12,13 @@ def _get_client():
 
 
 async def analizar_alerta(
-    tipo_evento:    str,
-    valor:          float | None,
-    severidad:      str,
-    mensaje:        str,
-    nombre_sistema: str | None = None,
+    tipo_evento:       str,
+    valor:             float | None,
+    severidad:         str,
+    mensaje:           str,
+    nombre_sistema:    str | None = None,
+    historial_valores: list       = None,
+    alertas_recientes: int        = 0,
 ) -> dict:
     client = _get_client()
     if not client:
@@ -27,7 +29,10 @@ async def analizar_alerta(
             "error":    "GEMINI_API_KEY no configurada.",
         }
 
-    prompt = _construir_prompt(tipo_evento, valor, severidad, mensaje, nombre_sistema)
+    prompt = _construir_prompt(
+        tipo_evento, valor, severidad, mensaje,
+        nombre_sistema, historial_valores or [], alertas_recientes
+    )
 
     try:
         response = client.models.generate_content(
@@ -44,7 +49,10 @@ async def analizar_alerta(
         }
 
 
-def _construir_prompt(tipo_evento, valor, severidad, mensaje, nombre_sistema):
+def _construir_prompt(
+    tipo_evento, valor, severidad, mensaje,
+    nombre_sistema, historial_valores, alertas_recientes
+):
     contexto = f"en el servidor '{nombre_sistema}'" if nombre_sistema else "en un servidor"
     valor_str = f"{valor:.1f}%" if valor is not None else "valor no disponible"
 
@@ -59,28 +67,52 @@ def _construir_prompt(tipo_evento, valor, severidad, mensaje, nombre_sistema):
     }
     descripcion = descripciones.get(tipo_evento, tipo_evento)
 
+    # Construir sección de historial
+    historial_str = ""
+    if historial_valores:
+        valores = [f"{h['valor']:.1f}%" for h in historial_valores]
+        historial_str = f"\nÚltimos valores registrados: {', '.join(valores)}"
+        if len(historial_valores) >= 3:
+            tendencia = historial_valores[0]['valor'] - historial_valores[-1]['valor']
+            if tendencia > 5:
+                historial_str += " (tendencia DESCENDENTE — mejorando)"
+            elif tendencia < -5:
+                historial_str += " (tendencia ASCENDENTE — empeorando)"
+            else:
+                historial_str += " (tendencia ESTABLE)"
+
+    # Contexto de alertas recientes
+    alertas_str = ""
+    if alertas_recientes > 1:
+        alertas_str = f"\nEsta es la alerta número {alertas_recientes} del mismo tipo en las últimas 24 horas."
+        if alertas_recientes >= 5:
+            alertas_str += " El problema es RECURRENTE y puede indicar una causa estructural."
+
     return f"""Eres un experto en administración de sistemas y seguridad informática.
 Se ha generado una alerta de severidad {severidad.upper()} {contexto}.
 
 Alerta detectada: {descripcion}
-Mensaje del sistema: {mensaje}
+Mensaje del sistema: {mensaje}{historial_str}{alertas_str}
+
+Basándote en el contexto histórico proporcionado, genera un análisis ESPECÍFICO para esta situación concreta.
+No uses respuestas genéricas — adapta el diagnóstico a los valores y tendencia observados.
 
 Responde EXACTAMENTE en este formato, sin texto adicional:
 
 ANALISIS:
-[Un párrafo conciso de 2-3 frases explicando qué significa esta alerta y su impacto potencial]
+[Un párrafo específico de 2-3 frases que tenga en cuenta los valores históricos y la tendencia]
 
 CAUSAS:
-- [causa 1]
-- [causa 2]
-- [causa 3]
+- [causa específica basada en los datos]
+- [causa específica basada en los datos]
+- [causa específica basada en los datos]
 
 ACCIONES:
-- [acción recomendada 1]
-- [acción recomendada 2]
-- [acción recomendada 3]
+- [acción concreta con comandos si procede]
+- [acción concreta con comandos si procede]
+- [acción concreta con comandos si procede]
 
-Sé específico y práctico. Usa terminología técnica apropiada."""
+Sé específico y práctico. Incluye comandos Linux cuando sea relevante."""
 
 
 def _parsear_respuesta(texto: str) -> dict:

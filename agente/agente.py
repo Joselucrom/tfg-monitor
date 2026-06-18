@@ -50,6 +50,22 @@ def log(msg: str) -> None:
 def log_error(msg: str) -> None:
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ {msg}")
 
+# ══════════════════════════════════════════════════════════
+# Detectar IP local del servidor
+# ══════════════════════════════════════════════════════════
+
+def detectar_ip_local() -> str:
+    """Detecta la IP local del servidor donde corre el agente."""
+    try:
+        # Conecta a un servidor externo sin enviar datos
+        # solo para obtener la IP local del interfaz de red
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return socket.gethostbyname(socket.gethostname())
 
 # ══════════════════════════════════════════════════════════
 # 1. Métricas del sistema — MetricaSnapshot
@@ -235,11 +251,28 @@ def _enviar_evento_web(
 
 def main() -> None:
     if not SISTEMA_ID:
-        log_error("SISTEMA_ID no configurado. Exporta la variable de entorno.")
+        log_error("SISTEMA_ID no configurado.")
         return
 
     log(f"Agente iniciado — sistema: {SISTEMA_ID} — intervalo: {INTERVALO}s")
     log(f"Umbrales → CPU:{UMBRAL_CPU}% RAM:{UMBRAL_RAM}% Disco:{UMBRAL_DISCO}%")
+
+    # Detectar y registrar IP automáticamente al arrancar
+    ip_local = detectar_ip_local()
+    log(f"IP detectada: {ip_local}")
+    try:
+        with httpx.Client(timeout=5) as client:
+            r = client.patch(
+                f"{BACKEND_URL}/api/sistemas/{SISTEMA_ID}/ip",
+                json={"ip": ip_local}
+            )
+            if r.status_code == 200:
+                log(f"IP actualizada en el sistema: {ip_local}")
+            else:
+                log_error(f"No se pudo actualizar la IP: {r.status_code}")
+    except httpx.RequestError as e:
+        log_error(f"No se pudo conectar al backend para actualizar IP: {e}")
+
     if URLS_VIGILAR:
         log(f"URLs vigiladas: {', '.join(URLS_VIGILAR)}")
 

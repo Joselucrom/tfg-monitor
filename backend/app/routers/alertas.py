@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from uuid import UUID
 from datetime import datetime, timezone
 
@@ -145,14 +145,9 @@ async def analisis_gemini(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """
-    Genera un análisis dinámico de la alerta usando Gemini.
-    Se llama cuando el admin abre el detalle de una alerta.
-    """
     alerta = await _get_or_404(db, alerta_id)
 
-    # Obtener el evento asociado para tener más contexto
-    from sqlalchemy import text
+    # Obtener el evento asociado
     result = await db.execute(
         text("""
             SELECT tipo, valor, origen, sistema_id
@@ -167,9 +162,12 @@ async def analisis_gemini(
     )
     evento = result.mappings().first()
 
-    # Obtener nombre del sistema si existe
     nombre_sistema = None
+    historial_valores = []
+    alertas_recientes = 0
+
     if evento and evento.get("sistema_id"):
+        # Nombre del sistema
         from app.models import Sistema
         res = await db.execute(
             select(Sistema).where(Sistema.id == evento["sistema_id"])
@@ -178,12 +176,46 @@ async def analisis_gemini(
         if sistema:
             nombre_sistema = sistema.nombre
 
+        # Últimos 5 valores de esa métrica en ese sistema
+        res_hist = await db.execute(
+            text("""
+                SELECT valor, timestamp
+                FROM eventos_sistema
+                WHERE sistema_id = :sid
+                  AND tipo = :tipo
+                  AND valor IS NOT NULL
+                ORDER BY timestamp DESC
+                LIMIT 5
+            """),
+            {"sid": evento["sistema_id"], "tipo": evento["tipo"]}
+        )
+        historial_valores = [
+            {"valor": row.valor, "timestamp": row.timestamp}
+            for row in res_hist.fetchall()
+        ]
+
+        # Número de alertas del mismo tipo en las últimas 24h
+        res_alertas = await db.execute(
+            text("""
+                SELECT COUNT(*) as total
+                FROM alertas a
+                JOIN eventos_sistema e ON e.id = a.evento_id
+                WHERE e.sistema_id = :sid
+                  AND e.tipo = :tipo
+                  AND a.timestamp > NOW() - INTERVAL '24 hours'
+            """),
+            {"sid": evento["sistema_id"], "tipo": evento["tipo"]}
+        )
+        alertas_recientes = res_alertas.scalar() or 0
+
     analisis = await analizar_alerta(
-        tipo_evento    = evento["tipo"]  if evento else "otro",
-        valor          = evento["valor"] if evento else None,
-        severidad      = alerta.severidad.value,
-        mensaje        = alerta.mensaje,
-        nombre_sistema = nombre_sistema,
+        tipo_evento      = evento["tipo"]  if evento else "otro",
+        valor            = evento["valor"] if evento else None,
+        severidad        = alerta.severidad.value,
+        mensaje          = alerta.mensaje,
+        nombre_sistema   = nombre_sistema,
+        historial_valores = historial_valores,
+        alertas_recientes = alertas_recientes,
     )
 
     return analisis
