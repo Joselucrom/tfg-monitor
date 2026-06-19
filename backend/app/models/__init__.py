@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import (
     String, Boolean, Float, Integer, Text,
@@ -80,7 +80,7 @@ class Usuario(Base):
         Enum(RolUsuario, name="rol_usuario"), default=RolUsuario.operador
     )
     activo        : Mapped[bool]        = mapped_column(Boolean, default=True)
-    created_at    : Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at    : Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     sistemas      : Mapped[list["Sistema"]]     = relationship(back_populates="usuario", cascade="all, delete-orphan")
     servicios_web : Mapped[list["ServicioWeb"]] = relationship(back_populates="usuario", cascade="all, delete-orphan")
@@ -101,7 +101,7 @@ class Sistema(Base):
     descripcion     : Mapped[Optional[str]]      = mapped_column(Text)
     activo          : Mapped[bool]               = mapped_column(Boolean, default=True)
     ultimo_contacto : Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    created_at      : Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at      : Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     usuario   : Mapped["Usuario"]               = relationship(back_populates="sistemas")
     snapshots : Mapped[list["MetricaSnapshot"]] = relationship(back_populates="sistema", cascade="all, delete-orphan")
@@ -120,7 +120,7 @@ class MetricaSnapshot(Base):
     cpu_percent   : Mapped[float]     = mapped_column(Float, nullable=False)
     ram_percent   : Mapped[float]     = mapped_column(Float, nullable=False)
     disco_percent : Mapped[float]     = mapped_column(Float, nullable=False)
-    timestamp     : Mapped[datetime]  = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    timestamp     : Mapped[datetime]  = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     sistema : Mapped["Sistema"] = relationship(back_populates="snapshots")
 
@@ -138,7 +138,7 @@ class ServicioWeb(Base):
     url         : Mapped[str]        = mapped_column(Text, nullable=False)
     intervalo_s : Mapped[int]        = mapped_column(Integer, default=60)
     activo      : Mapped[bool]       = mapped_column(Boolean, default=True)
-    created_at  : Mapped[datetime]   = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at  : Mapped[datetime]   = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     usuario : Mapped["Usuario"]          = relationship(back_populates="servicios_web")
     eventos : Mapped[list["EventoWeb"]]  = relationship(back_populates="servicio_web")
@@ -166,7 +166,7 @@ class Evento(Base):
     valor     : Mapped[Optional[float]] = mapped_column(Float)
     origen    : Mapped[Optional[str]]   = mapped_column(String(100))
     metadata_ : Mapped[Optional[dict]]  = mapped_column("metadata", JSON)
-    timestamp : Mapped[datetime]        = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    timestamp : Mapped[datetime]        = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     alertas : Mapped[list["Alerta"]] = relationship(
         back_populates="evento",
@@ -221,7 +221,7 @@ class Regla(Base):
         Enum(SeveridadAlerta, name="severidad_alerta"), default=SeveridadAlerta.warning
     )
     activa     : Mapped[bool]            = mapped_column(Boolean, default=True)
-    created_at : Mapped[datetime]        = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at : Mapped[datetime]        = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     usuario : Mapped["Usuario"]      = relationship(back_populates="reglas")
     alertas : Mapped[list["Alerta"]] = relationship(back_populates="regla")
@@ -242,7 +242,7 @@ class Alerta(Base):
     )
     mensaje     : Mapped[str]                = mapped_column(Text, nullable=False)
     resuelta    : Mapped[bool]               = mapped_column(Boolean, default=False)
-    timestamp   : Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    timestamp   : Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     resuelta_at : Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     regla  : Mapped["Regla"]  = relationship(back_populates="alertas")

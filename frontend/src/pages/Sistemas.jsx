@@ -16,12 +16,13 @@ function BadgeEstado({ sistema, snap }) {
 
 function ModalInstrucciones({ sistema, onClose }) {
   const [copiado, setCopiado] = useState(false)
+  const backendUrl = window.location.origin.replace('5173', '8000')
   const comandos = `# 1. Activa el entorno virtual
 source .venv/bin/activate
 
 # 2. Configura las variables de entorno
 export SISTEMA_ID="${sistema.id}"
-export BACKEND_URL="http://TU-IP-BACKEND:8000"
+export BACKEND_URL="${backendUrl}"
 export INTERVALO=30
 export UMBRAL_CPU=85
 export UMBRAL_RAM=85

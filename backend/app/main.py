@@ -1,27 +1,51 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.database import AsyncSessionLocal
 from app.routers import (
     auth, usuarios, sistemas, servicios_web,
     eventos, alertas, reglas, metricas, admin
 )
 
+
+async def tarea_verificar_agentes():
+    """Tarea de fondo que verifica agentes caídos cada 5 minutos."""
+    from app.routers.sistemas import verificar_agentes_caidos_interno
+
+    await asyncio.sleep(60)  # espera inicial al arrancar
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                await verificar_agentes_caidos_interno(db)
+        except Exception as e:
+            print(f"Error en tarea verificar agentes: {e}")
+        await asyncio.sleep(300)  # cada 5 minutos
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(tarea_verificar_agentes())
+    yield
+    task.cancel()
+
+
 app = FastAPI(
     title=settings.app_name,
     version="0.2.0",
-    debug=settings.debug
+    debug=settings.debug,
+    lifespan=lifespan,
 )
 
-# CORS — permitir peticiones desde el frontend React en desarrollo
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"], # Permitir todos los orígenes para desarrollo; ajustar en producción
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"], 
     allow_headers=["*"],
 )
 
-# ── Routers ───────────────────────────────────────────────
 app.include_router(auth.router,          prefix="/api/auth",          tags=["auth"])
 app.include_router(usuarios.router,      prefix="/api/usuarios",      tags=["usuarios"])
 app.include_router(sistemas.router,      prefix="/api/sistemas",      tags=["sistemas"])

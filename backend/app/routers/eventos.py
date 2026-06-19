@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from uuid import UUID, uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Alerta, Regla, Recomendacion, AlertaRecomendacion, Sistema
@@ -66,7 +66,7 @@ async def recibir_evento_sistema(
     db: AsyncSession = Depends(get_db),
 ):
     evento_id = uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     await db.execute(text("""
         INSERT INTO eventos_sistema
@@ -112,7 +112,7 @@ async def recibir_evento_web(
     db: AsyncSession = Depends(get_db),
 ):
     evento_id = uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     await db.execute(text("""
         INSERT INTO eventos_web

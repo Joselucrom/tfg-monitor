@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, text
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from app.database import get_db
 from app.models import Sistema, Usuario
@@ -172,11 +172,59 @@ async def ping_sistema(
     sistema = result.scalar_one_or_none()
     if not sistema:
         raise HTTPException(status_code=404, detail="Sistema no encontrado")
-    sistema.ultimo_contacto = datetime.utcnow()
+    sistema.ultimo_contacto = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(sistema)
     return sistema
 
+# ══════════════════════════════════════════════════════════
+# Verificar agentes caídos
+# ══════════════════════════════════════════════════════════
+
+async def verificar_agentes_caidos_interno(db: AsyncSession) -> None:
+    """
+    Comprueba sistemas sin contacto reciente y genera un evento
+    agente_caido solo si no existe ya una alerta activa del mismo tipo.
+    Pensada para ser llamada por una tarea de fondo periódica.
+    """
+    MINUTOS = 5
+    limite = datetime.now(timezone.utc) - timedelta(minutes=MINUTOS)
+
+    result = await db.execute(
+        select(Sistema).where(
+            Sistema.activo == True,
+            Sistema.ultimo_contacto != None,
+            Sistema.ultimo_contacto < limite,
+        )
+    )
+    sistemas_caidos = result.scalars().all()
+
+    for sistema in sistemas_caidos:
+        res = await db.execute(text("""
+            SELECT COUNT(*) FROM alertas a
+            JOIN eventos_sistema e ON e.id = a.evento_id
+            WHERE e.sistema_id = :sid
+              AND e.tipo = 'agente_caido'
+              AND a.resuelta = false
+        """), {"sid": sistema.id})
+        ya_existe = res.scalar() or 0
+
+        if ya_existe == 0:
+            evento_result = await db.execute(text("""
+                INSERT INTO eventos_sistema
+                    (id, tipo, valor, origen, timestamp, sistema_id)
+                VALUES
+                    (gen_random_uuid(), 'agente_caido', 1.0, :origen, NOW(), :sid)
+                RETURNING id
+            """), {"origen": sistema.nombre, "sid": sistema.id})
+            evento_id = evento_result.scalar()
+
+            # Evaluar reglas de agente_caido para este evento
+            from app.routers.eventos import _evaluar_reglas_raw
+            await _evaluar_reglas_raw(db, evento_id, "agente_caido", 1.0, sistema.nombre)
+
+            await db.commit()
+            print(f"[agente_caido] Sistema sin contacto: {sistema.nombre}")
 
 # ══════════════════════════════════════════════════════════
 # Helper

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import MetricaSnapshot, Sistema
@@ -74,7 +74,7 @@ async def guardar_snapshot(
     )
     sistema = result.scalar_one_or_none()
     if sistema:
-        sistema.ultimo_contacto = datetime.utcnow()
+        sistema.ultimo_contacto = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(snapshot)

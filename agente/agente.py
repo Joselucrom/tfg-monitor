@@ -25,7 +25,10 @@ import time
 import socket
 import httpx
 import psutil
-from datetime import datetime
+import re
+import platform
+import subprocess
+from datetime import datetime, timedelta
 
 
 # ── Configuración desde variables de entorno ──────────────
@@ -37,6 +40,7 @@ URLS_VIGILAR = [u.strip() for u in os.getenv("URLS_VIGILAR", "").split(",") if u
 UMBRAL_CPU   = float(os.getenv("UMBRAL_CPU",  "85"))
 UMBRAL_RAM   = float(os.getenv("UMBRAL_RAM",  "85"))
 UMBRAL_DISCO = float(os.getenv("UMBRAL_DISCO", "85"))
+UMBRAL_LOGIN = int(os.getenv("UMBRAL_LOGIN", "3"))
 TIMEOUT_HTTP = float(os.getenv("TIMEOUT_HTTP", "2"))
 HOSTNAME     = socket.gethostname()
 
@@ -49,23 +53,6 @@ def log(msg: str) -> None:
 
 def log_error(msg: str) -> None:
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ {msg}")
-
-# ══════════════════════════════════════════════════════════
-# Detectar IP local del servidor
-# ══════════════════════════════════════════════════════════
-
-def detectar_ip_local() -> str:
-    """Detecta la IP local del servidor donde corre el agente."""
-    try:
-        # Conecta a un servidor externo sin enviar datos
-        # solo para obtener la IP local del interfaz de red
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return socket.gethostbyname(socket.gethostname())
 
 # ══════════════════════════════════════════════════════════
 # 1. Métricas del sistema — MetricaSnapshot
@@ -106,9 +93,8 @@ def enviar_snapshot(client: httpx.Client, metricas: dict) -> bool:
 
 def evaluar_y_enviar_eventos_sistema(client: httpx.Client, metricas: dict) -> None:
     """
-    Compara cada métrica con su umbral.
-    Si lo supera, envía un EventoSistema al backend,
-    que disparará el motor de reglas automáticamente.
+    Compara cada métrica con su umbral y envía eventos si corresponde.
+    Incluye también la detección de login_fallido.
     """
     checks = [
         ("cpu_alta",   metricas["cpu_percent"],   UMBRAL_CPU),
@@ -119,6 +105,11 @@ def evaluar_y_enviar_eventos_sistema(client: httpx.Client, metricas: dict) -> No
     for tipo, valor, umbral in checks:
         if valor > umbral:
             _enviar_evento_sistema(client, tipo, valor)
+
+    intentos = detectar_login_fallido()
+    if intentos >= UMBRAL_LOGIN:
+        log(f"Login fallidos detectados: {intentos} en los últimos 5 min")
+        _enviar_evento_sistema(client, "login_fallido", float(intentos))
 
 
 def _enviar_evento_sistema(
@@ -147,6 +138,86 @@ def _enviar_evento_sistema(
     except httpx.RequestError as e:
         log_error(f"Sin conexión al backend: {e}")
 
+# ══════════════════════════════════════════════════════════
+# Detección de login fallido — multiplataforma
+# ══════════════════════════════════════════════════════════
+
+def detectar_login_fallido() -> int:
+    """Cuenta los intentos de login fallidos en los últimos 5 minutos."""
+    sistema = platform.system()
+    if sistema == "Linux":
+        return _login_fallido_linux()
+    elif sistema == "Windows":
+        return _login_fallido_windows()
+    else:
+        return 0
+
+
+def _login_fallido_linux() -> int:
+    ventana_minutos = 5
+    patron = re.compile(r"Failed password|authentication failure|Invalid user")
+    ahora = datetime.now()
+    limite = ahora - timedelta(minutes=ventana_minutos)
+    log_path = "/var/log/auth.log"
+
+    if os.path.exists(log_path):
+        contador = 0
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                for linea in f:
+                    try:
+                        partes = linea.split()
+                        if len(partes) < 3:
+                            continue
+                        fecha_str = f"{partes[0]} {partes[1]} {partes[2]} {ahora.year}"
+                        fecha_log = datetime.strptime(fecha_str, "%b %d %H:%M:%S %Y")
+                        if fecha_log >= limite and patron.search(linea):
+                            contador += 1
+                    except (ValueError, IndexError):
+                        continue
+        except PermissionError:
+            log_error(f"Sin permisos para leer {log_path} — ejecuta el agente con sudo")
+        return contador
+
+    # Fallback con journald si no existe auth.log
+    try:
+        resultado = subprocess.run(
+            ["journalctl", "_SYSTEMD_UNIT=sshd.service",
+             "--since", "5 minutes ago", "--no-pager"],
+            capture_output=True, text=True, timeout=5
+        )
+        return sum(1 for l in resultado.stdout.splitlines() if patron.search(l))
+    except Exception:
+        return 0
+
+
+def _login_fallido_windows() -> int:
+    try:
+        resultado = subprocess.run([
+            "powershell", "-Command",
+            "Get-EventLog -LogName Security -InstanceId 4625 "
+            "-After (Get-Date).AddMinutes(-5) | Measure-Object | "
+            "Select-Object -ExpandProperty Count"
+        ], capture_output=True, text=True, timeout=10)
+        return int(resultado.stdout.strip() or 0)
+    except Exception:
+        return 0
+
+
+# ══════════════════════════════════════════════════════════
+# Detección automática de IP
+# ══════════════════════════════════════════════════════════
+
+def detectar_ip_local() -> str:
+    """Detecta la IP local del servidor donde corre el agente."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return socket.gethostbyname(socket.gethostname())
 
 # ══════════════════════════════════════════════════════════
 # 3. Checks HTTP — EventoWeb
@@ -251,11 +322,11 @@ def _enviar_evento_web(
 
 def main() -> None:
     if not SISTEMA_ID:
-        log_error("SISTEMA_ID no configurado.")
+        log_error("SISTEMA_ID no configurado. Exporta la variable de entorno.")
         return
 
     log(f"Agente iniciado — sistema: {SISTEMA_ID} — intervalo: {INTERVALO}s")
-    log(f"Umbrales → CPU:{UMBRAL_CPU}% RAM:{UMBRAL_RAM}% Disco:{UMBRAL_DISCO}%")
+    log(f"Umbrales → CPU:{UMBRAL_CPU}% RAM:{UMBRAL_RAM}% Disco:{UMBRAL_DISCO}% Login:{UMBRAL_LOGIN}")
 
     # Detectar y registrar IP automáticamente al arrancar
     ip_local = detectar_ip_local()
@@ -278,14 +349,9 @@ def main() -> None:
 
     while True:
         with httpx.Client(timeout=10) as client:
-            # 1. Recoger y guardar snapshot
             metricas = recoger_metricas()
             enviar_snapshot(client, metricas)
-
-            # 2. Evaluar umbrales y enviar eventos de sistema si procede
             evaluar_y_enviar_eventos_sistema(client, metricas)
-
-            # 3. Comprobar servicios web
             check_servicios_web(client)
 
         log(f"Ciclo completado — próximo en {INTERVALO}s")
