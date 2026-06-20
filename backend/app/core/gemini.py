@@ -75,9 +75,9 @@ def _construir_prompt(
         if len(historial_valores) >= 3:
             tendencia = historial_valores[0]['valor'] - historial_valores[-1]['valor']
             if tendencia > 5:
-                historial_str += " (tendencia DESCENDENTE — mejorando)"
-            elif tendencia < -5:
                 historial_str += " (tendencia ASCENDENTE — empeorando)"
+            elif tendencia < -5:
+                historial_str += " (tendencia DESCENDENTE — mejorando)"
             else:
                 historial_str += " (tendencia ESTABLE)"
 

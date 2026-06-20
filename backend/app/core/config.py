@@ -1,4 +1,7 @@
 from pydantic_settings import BaseSettings
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # apunta a backend/
 
 
 class Settings(BaseSettings):
@@ -11,9 +14,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    class Config:
-        env_file = ".env"
-
     gemini_api_key: str = ""
-    
+
+    class Config:
+        env_file = str(BASE_DIR / ".env")
+
+
 settings = Settings()
