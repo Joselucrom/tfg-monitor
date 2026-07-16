@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import client from '../api/client'
+import { GraficaDashboard } from '../components/GraficaMetricas'
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -150,7 +151,11 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-
+        {sistemas.length > 0 && (
+          <div className="mb-4">
+            <GraficaDashboard sistemas={sistemas} />
+          </div>
+        )}
         {/* Bloques principales */}
         <div className="grid grid-cols-2 gap-4">
 

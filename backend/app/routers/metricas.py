@@ -8,9 +8,32 @@ from app.database import get_db
 from app.models import MetricaSnapshot, Sistema
 from app.schemas import MetricaSnapshotCreate, MetricaSnapshotOut
 from app.routers.auth import get_current_user
+from datetime import datetime, timedelta, timezone
+from fastapi import Query
 
 router = APIRouter()
 
+@router.get("/historico/{sistema_id}", response_model=list[MetricaSnapshotOut])
+async def historico_sistema(
+    sistema_id: UUID,
+    minutos: int = Query(60, description="Ventana de tiempo en minutos (30, 60, 1440)"),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Devuelve los snapshots de un sistema en la ventana de tiempo indicada.
+    Usado por las gráficas del dashboard y la vista de sistemas.
+    """
+    desde = datetime.now(timezone.utc) - timedelta(minutes=minutos)
+    result = await db.execute(
+        select(MetricaSnapshot)
+        .where(
+            MetricaSnapshot.sistema_id == sistema_id,
+            MetricaSnapshot.timestamp >= desde,
+        )
+        .order_by(MetricaSnapshot.timestamp.asc())
+    )
+    return result.scalars().all()
 
 @router.get("/", response_model=list[MetricaSnapshotOut])
 async def listar_snapshots(

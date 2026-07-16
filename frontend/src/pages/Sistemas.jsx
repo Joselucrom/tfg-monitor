@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
+import { GraficaSistema } from '../components/GraficaMetricas'
 import client from '../api/client'
 
 function BadgeEstado({ sistema, snap }) {
@@ -191,6 +192,7 @@ export default function Sistemas() {
   const [loading,    setLoading]    = useState(true)
   const [modalAbrir, setModalAbrir] = useState(false)
   const [modalInstrucciones, setModalInstrucciones] = useState(null)
+  const [sistemaDetalle, setSistemaDetalle] = useState(null)
 
   useEffect(() => {
     cargarSistemas()
@@ -288,8 +290,9 @@ export default function Sistemas() {
                   return (
                     <tr
                       key={s.id}
+                      onClick={() => setSistemaDetalle(s)}
                       className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-                                  hover:bg-blue-50/30 transition-colors`}
+                                  cursor-pointer hover:bg-blue-50/30 transition-colors`}
                     >
                       <td className="px-4 py-3 font-medium text-gray-800">{s.nombre}</td>
                       <td className="px-4 py-3 text-gray-500">{s.ip || '—'}</td>
@@ -311,21 +314,30 @@ export default function Sistemas() {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           <button
-                            onClick={() => toggleSistema(s)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              toggleSistema(s)
+                            }}
                             className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
                             title={s.activo ? 'Desactivar' : 'Activar'}
                           >
                             {s.activo ? 'Desactivar' : 'Activar'}
                           </button>
                           <button
-                            onClick={() => eliminarSistema(s.id)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              eliminarSistema(s.id)
+                            }}
                             className="text-xs text-red-400 hover:text-red-600 transition-colors"
                             title="Eliminar"
                           >
                             Eliminar
                           </button>
                           <button
-                            onClick={() => setModalInstrucciones(s)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setModalInstrucciones(s)
+                            }}
                             className="text-xs text-green-600 hover:underline"
                           >
                             Instalar agente
@@ -351,6 +363,27 @@ export default function Sistemas() {
             sistema={modalInstrucciones}
             onClose={() => setModalInstrucciones(null)}
           />
+        )}
+        {sistemaDetalle && (
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-3xl shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-base font-medium text-gray-900">
+                  {sistemaDetalle.nombre}
+                </h2>
+                <button
+                  onClick={() => setSistemaDetalle(null)}
+                  className="text-xs text-gray-400 hover:text-gray-700"
+                >
+                  ✕ Cerrar
+                </button>
+              </div>
+              <GraficaSistema
+                sistemaId={sistemaDetalle.id}
+                nombreSistema={sistemaDetalle.nombre}
+              />
+            </div>
+          </div>
         )}
       </div>
     </Layout>
