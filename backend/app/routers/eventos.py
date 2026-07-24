@@ -23,8 +23,12 @@ async def listar_eventos_sistema(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    where = "WHERE sistema_id = :sid" if sistema_id else ""
-    params = {"sid": sistema_id, "lim": limite}
+    where = (
+        "WHERE sistema_id = :sid AND sistema_id IN (SELECT id FROM sistemas WHERE usuario_id = :uid)"
+        if sistema_id
+        else "WHERE sistema_id IN (SELECT id FROM sistemas WHERE usuario_id = :uid)"
+    )
+    params = {"sid": sistema_id, "lim": limite, "uid": current_user.id}
     result = await db.execute(
         text(f"""
             SELECT id, sistema_id, tipo, valor, origen, proceso, pid, timestamp
@@ -45,8 +49,12 @@ async def listar_eventos_web(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    where = "WHERE servicio_web_id = :sid" if servicio_web_id else ""
-    params = {"sid": servicio_web_id, "lim": limite}
+    where = (
+        "WHERE servicio_web_id = :sid AND servicio_web_id IN (SELECT id FROM servicios_web WHERE usuario_id = :uid)"
+        if servicio_web_id
+        else "WHERE servicio_web_id IN (SELECT id FROM servicios_web WHERE usuario_id = :uid)"
+    )
+    params = {"sid": servicio_web_id, "lim": limite, "uid": current_user.id}
     result = await db.execute(
         text(f"""
             SELECT id, servicio_web_id, tipo, valor, origen, http_status, tiempo_ms, timestamp

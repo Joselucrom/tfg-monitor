@@ -1,11 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
+from sqlalchemy import select, text, or_
 from uuid import UUID
 from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Alerta, Recomendacion, AlertaRecomendacion
+from app.models import (
+    Alerta,
+    Recomendacion,
+    AlertaRecomendacion,
+    EventoSistema,
+    EventoWeb,
+    Sistema,
+    ServicioWeb,
+)
 from app.schemas import (
     AlertaOut, RecomendacionOut,
     AlertaRecomendacionOut, AlertaRecomendacionUpdate,
@@ -29,12 +37,33 @@ async def listar_alertas(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Lista alertas con filtros opcionales por estado y severidad."""
-    q = select(Alerta).order_by(Alerta.timestamp.desc()).limit(limite)
+    """Lista alertas del usuario actual con filtros opcionales."""
+    q = select(Alerta).where(
+        or_(
+            select(1)
+            .select_from(EventoSistema)
+            .join(Sistema, EventoSistema.sistema_id == Sistema.id)
+            .where(
+                EventoSistema.id == Alerta.evento_id,
+                Sistema.usuario_id == current_user.id,
+            )
+            .exists(),
+            select(1)
+            .select_from(EventoWeb)
+            .join(ServicioWeb, EventoWeb.servicio_web_id == ServicioWeb.id)
+            .where(
+                EventoWeb.id == Alerta.evento_id,
+                ServicioWeb.usuario_id == current_user.id,
+            )
+            .exists(),
+        )
+    ).order_by(Alerta.timestamp.desc()).limit(limite)
+
     if resuelta is not None:
         q = q.where(Alerta.resuelta == resuelta)
     if severidad:
         q = q.where(Alerta.severidad == severidad)
+
     result = await db.execute(q)
     return result.scalars().all()
 
@@ -46,7 +75,7 @@ async def obtener_alerta(
     current_user=Depends(get_current_user),
 ):
     """Devuelve el detalle de una alerta."""
-    return await _get_or_404(db, alerta_id)
+    return await _get_or_404(db, alerta_id, current_user.id)
 
 
 @router.post("/{alerta_id}/resolver", response_model=AlertaOut)
@@ -56,7 +85,7 @@ async def resolver_alerta(
     current_user=Depends(get_current_user),
 ):
     """Marca una alerta como resuelta."""
-    alerta = await _get_or_404(db, alerta_id)
+    alerta = await _get_or_404(db, alerta_id, current_user.id)
     if alerta.resuelta:
         raise HTTPException(status_code=400, detail="La alerta ya está resuelta")
     alerta.resuelta    = True
@@ -79,7 +108,7 @@ async def obtener_recomendaciones(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    await _get_or_404(db, alerta_id)
+    await _get_or_404(db, alerta_id, current_user.id)
     result = await db.execute(
         select(AlertaRecomendacion, Recomendacion)
         .join(Recomendacion, AlertaRecomendacion.recomendacion_id == Recomendacion.id)
@@ -112,7 +141,7 @@ async def obtener_recomendacion(
     current_user=Depends(get_current_user),
 ):
     """Devuelve el detalle de una recomendación concreta de una alerta."""
-    ar = await _get_ar_or_404(db, alerta_id, recomendacion_id)
+    ar = await _get_ar_or_404(db, alerta_id, recomendacion_id, current_user.id)
     return ar
 
 
@@ -131,7 +160,7 @@ async def marcar_recomendacion(
     Marca una recomendación como aplicada o no aplicada.
     Registra la fecha si se marca como aplicada.
     """
-    ar = await _get_ar_or_404(db, alerta_id, recomendacion_id)
+    ar = await _get_ar_or_404(db, alerta_id, recomendacion_id, current_user.id)
     ar.aplicada = datos.aplicada
     ar.aplicada_at = datetime.now(timezone.utc) if datos.aplicada else None
     await db.commit()
@@ -145,7 +174,7 @@ async def analisis_gemini(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    alerta = await _get_or_404(db, alerta_id)
+    alerta = await _get_or_404(db, alerta_id, current_user.id)
 
     # Obtener el evento asociado
     result = await db.execute(
@@ -225,9 +254,29 @@ async def analisis_gemini(
 # Helpers
 # ══════════════════════════════════════════════════════════
 
-async def _get_or_404(db: AsyncSession, alerta_id: UUID) -> Alerta:
+async def _get_or_404(db: AsyncSession, alerta_id: UUID, usuario_id: UUID) -> Alerta:
     result = await db.execute(
-        select(Alerta).where(Alerta.id == alerta_id)
+        select(Alerta).where(
+            Alerta.id == alerta_id,
+            or_(
+                select(1)
+                .select_from(EventoSistema)
+                .join(Sistema, EventoSistema.sistema_id == Sistema.id)
+                .where(
+                    EventoSistema.id == Alerta.evento_id,
+                    Sistema.usuario_id == usuario_id,
+                )
+                .exists(),
+                select(1)
+                .select_from(EventoWeb)
+                .join(ServicioWeb, EventoWeb.servicio_web_id == ServicioWeb.id)
+                .where(
+                    EventoWeb.id == Alerta.evento_id,
+                    ServicioWeb.usuario_id == usuario_id,
+                )
+                .exists(),
+            ),
+        )
     )
     alerta = result.scalar_one_or_none()
     if not alerta:
@@ -239,7 +288,9 @@ async def _get_ar_or_404(
     db: AsyncSession,
     alerta_id: UUID,
     recomendacion_id: UUID,
+    usuario_id: UUID,
 ) -> AlertaRecomendacion:
+    await _get_or_404(db, alerta_id, usuario_id)
     result = await db.execute(
         select(AlertaRecomendacion).where(
             AlertaRecomendacion.alerta_id        == alerta_id,

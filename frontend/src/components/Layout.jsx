@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Server, Globe, Bell,
   ShieldAlert, List, LogOut, Settings
 } from 'lucide-react'
+import ModalPerfil from './ModalPerfil'
 
 const navItems = [
   { to: '/',          label: 'Dashboard',     icon: LayoutDashboard, end: true },
@@ -17,6 +19,8 @@ const navItems = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+
+  const [modalPerfil, setModalPerfil] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -87,18 +91,22 @@ export default function Layout({ children }) {
           )}
         </nav>
 
-        {/* Usuario */}
+        {/* Usuario - clickable */}
         <div className="border-t border-gray-200 pt-3 mt-3">
-          <div className="flex items-center gap-2 px-2 mb-2">
+          <button
+            onClick={() => setModalPerfil(true)}
+            className="flex items-center gap-2 px-2 mb-2 w-full hover:bg-white
+                       rounded-lg py-1.5 transition-colors group"
+          >
             <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center
                             text-xs font-medium text-blue-700 shrink-0">
               {user?.nombre?.charAt(0).toUpperCase() || 'U'}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 text-left">
               <p className="text-xs font-medium text-gray-800 truncate">{user?.nombre}</p>
               <p className="text-xs text-gray-400 truncate">{user?.rol}</p>
             </div>
-          </div>
+          </button>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm
@@ -108,6 +116,14 @@ export default function Layout({ children }) {
             Cerrar sesión
           </button>
         </div>
+
+        {/* Modal de perfil */}
+        {modalPerfil && (
+          <ModalPerfil
+            usuario={user}
+            onClose={() => setModalPerfil(false)}
+          />
+        )}
       </aside>
 
       {/* Contenido principal */}

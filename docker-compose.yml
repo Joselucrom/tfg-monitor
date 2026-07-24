@@ -12,6 +12,44 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tfg_user -d tfg_monitor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tfg_backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command:
+      - sh
+      - -c
+      - |
+        until pg_isready -h db -U tfg_user -d tfg_monitor; do
+          echo 'Esperando a Postgres...'
+          sleep 1
+        done
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tfg_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4
@@ -23,6 +61,7 @@ services:
       - "5050:80"
     depends_on:
       - db
+    restart: unless-stopped
 
 volumes:
   postgres_data:
