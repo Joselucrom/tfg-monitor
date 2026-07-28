@@ -59,7 +59,7 @@ tfg-monitor/
 ├── agente/               # Script de monitorización
 │   ├── agente.py
 │   └── requirements.txt
-├── tests/                # Suite de pruebas (55 tests)
+├── tests/                # Suite de pruebas (58 tests)
 │   ├── conftest.py
 │   ├── test_motor_reglas.py
 │   ├── test_gemini.py
@@ -164,7 +164,7 @@ docker exec -it tfg_postgres psql -U tfg_user -d tfg_monitor \
 docker exec -i tfg_postgres psql -U tfg_user -d tfg_monitor_test \
   < backend/schema.sql
 
-# Ejecutar suite completa (55 tests)
+# Ejecutar suite completa (58 tests)
 pytest tests/ -v
 ```
 
