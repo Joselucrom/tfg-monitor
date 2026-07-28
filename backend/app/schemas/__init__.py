@@ -46,6 +46,7 @@ class SistemaCreate(BaseModel):
     nombre: str
     ip: Optional[str] = None
     descripcion: Optional[str] = None
+    intervalo_s: Optional[int] = None
 
 
 class SistemaUpdate(BaseModel):
@@ -53,6 +54,7 @@ class SistemaUpdate(BaseModel):
     ip: Optional[str] = None
     descripcion: Optional[str] = None
     activo: Optional[bool] = None
+    intervalo_s: Optional[int] = None
 
 
 class SistemaOut(BaseSchema):
@@ -61,6 +63,7 @@ class SistemaOut(BaseSchema):
     ip: Optional[str]
     descripcion: Optional[str]
     activo: bool
+    intervalo_s: int
     ultimo_contacto: Optional[datetime]
     created_at: datetime
 

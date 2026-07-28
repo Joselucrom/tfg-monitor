@@ -253,6 +253,7 @@ def _check_url(client: httpx.Client, url: str) -> None:
         if not r.is_success:
             # Servicio caído o error HTTP
             _enviar_evento_web(client, servicio_web_id, "http_down",
+                               valor=float(r.status_code),
                                http_status=r.status_code, tiempo_ms=tiempo_ms,
                                origen=url)
             log(f"HTTP DOWN: {url} → {r.status_code}")
@@ -260,6 +261,7 @@ def _check_url(client: httpx.Client, url: str) -> None:
         elif tiempo_ms > TIMEOUT_HTTP * 1000:
             # Servicio lento
             _enviar_evento_web(client, servicio_web_id, "http_lento",
+                               valor=float(tiempo_ms),
                                http_status=r.status_code, tiempo_ms=tiempo_ms,
                                origen=url)
             log(f"HTTP LENTO: {url} → {tiempo_ms}ms")
@@ -269,12 +271,14 @@ def _check_url(client: httpx.Client, url: str) -> None:
 
     except httpx.TimeoutException:
         _enviar_evento_web(client, servicio_web_id, "http_down",
+                           valor=float(TIMEOUT_HTTP * 2000),
                            http_status=0, tiempo_ms=int(TIMEOUT_HTTP * 2000),
                            origen=url)
         log_error(f"HTTP TIMEOUT: {url}")
 
     except httpx.RequestError as e:
         _enviar_evento_web(client, servicio_web_id, "http_down",
+                           valor=0.0,
                            http_status=0, tiempo_ms=0, origen=url)
         log_error(f"HTTP ERROR: {url} — {e}")
 
@@ -295,6 +299,7 @@ def _enviar_evento_web(
     client: httpx.Client,
     servicio_web_id: str,
     tipo: str,
+    valor: float,
     http_status: int,
     tiempo_ms: int,
     origen: str,
@@ -303,6 +308,7 @@ def _enviar_evento_web(
     payload = {
         "servicio_web_id": servicio_web_id,
         "tipo":            tipo,
+        "valor":           valor,
         "origen":          origen,
         "http_status":     http_status,
         "tiempo_ms":       tiempo_ms,
@@ -314,6 +320,26 @@ def _enviar_evento_web(
             log_error(f"Error al enviar EventoWeb: {r.status_code} {r.text}")
     except httpx.RequestError as e:
         log_error(f"Sin conexión al backend: {e}")
+
+
+# ══════════════════════════════════════════════════════════
+# Obtener configuración del sistema
+# ══════════════════════════════════════════════════════════
+
+def obtener_intervalo_sistema(client: httpx.Client) -> int:
+    """
+    Obtiene el intervalo configurado en el sistema desde la BD.
+    Si no se puede obtener, devuelve el intervalo por defecto.
+    """
+    try:
+        r = client.get(f"{BACKEND_URL}/api/sistemas/{SISTEMA_ID}", timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            intervalo = data.get("intervalo_s", INTERVALO)
+            return int(intervalo)
+    except httpx.RequestError:
+        pass
+    return INTERVALO
 
 
 # ══════════════════════════════════════════════════════════
@@ -331,8 +357,12 @@ def main() -> None:
     # Detectar y registrar IP automáticamente al arrancar
     ip_local = detectar_ip_local()
     log(f"IP detectada: {ip_local}")
+    
+    # Obtener intervalo_s del sistema
+    intervalo_actual = INTERVALO
     try:
         with httpx.Client(timeout=5) as client:
+            intervalo_actual = obtener_intervalo_sistema(client)
             r = client.patch(
                 f"{BACKEND_URL}/api/sistemas/{SISTEMA_ID}/ip",
                 json={"ip": ip_local}
@@ -347,15 +377,20 @@ def main() -> None:
     if URLS_VIGILAR:
         log(f"URLs vigiladas: {', '.join(URLS_VIGILAR)}")
 
+    log(f"Intervalo de monitorización: {intervalo_actual}s")
+
     while True:
         with httpx.Client(timeout=10) as client:
             metricas = recoger_metricas()
             enviar_snapshot(client, metricas)
             evaluar_y_enviar_eventos_sistema(client, metricas)
             check_servicios_web(client)
+            
+            # Actualizar intervalo dinámico después de cada ciclo
+            intervalo_actual = obtener_intervalo_sistema(client)
 
-        log(f"Ciclo completado — próximo en {INTERVALO}s")
-        time.sleep(INTERVALO)
+        log(f"Ciclo completado — próximo en {intervalo_actual}s")
+        time.sleep(intervalo_actual)
 
 
 if __name__ == "__main__":

@@ -2,12 +2,24 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.core.config import settings
-from app.database import AsyncSessionLocal
+from app.database import AsyncSessionLocal, engine
 from app.routers import (
     auth, usuarios, sistemas, servicios_web,
     eventos, alertas, reglas, metricas, admin
 )
+
+
+async def ensure_database_schema() -> None:
+    """Asegura que la base de datos tenga las columnas necesarias."""
+    async with engine.begin() as conn:
+        await conn.execute(text(
+            "ALTER TABLE sistemas ADD COLUMN IF NOT EXISTS intervalo_s INT NOT NULL DEFAULT 30"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE servicios_web ADD COLUMN IF NOT EXISTS intervalo_s INT NOT NULL DEFAULT 60"
+        ))
 
 
 async def tarea_verificar_agentes():
@@ -26,6 +38,7 @@ async def tarea_verificar_agentes():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await ensure_database_schema()
     task = asyncio.create_task(tarea_verificar_agentes())
     yield
     task.cancel()
@@ -40,9 +53,16 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permitir todos los orígenes para desarrollo; ajustar en producción
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server (default port)
+        "http://localhost:5174",  # Vite alternative port
+        "http://localhost:3000",  # Alternative dev port
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
-    allow_methods=["*"], 
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

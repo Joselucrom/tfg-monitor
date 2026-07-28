@@ -221,7 +221,7 @@ async def verificar_agentes_caidos_interno(db: AsyncSession) -> None:
 
             # Evaluar reglas de agente_caido para este evento
             from app.routers.eventos import _evaluar_reglas_raw
-            await _evaluar_reglas_raw(db, evento_id, "agente_caido", 1.0, sistema.nombre)
+            await _evaluar_reglas_raw(db, evento_id, "agente_caido", 1.0, sistema.nombre, sistema.usuario_id)
 
             await db.commit()
             print(f"[agente_caido] Sistema sin contacto: {sistema.nombre}")

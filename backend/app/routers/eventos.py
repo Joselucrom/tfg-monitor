@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Alerta, Regla, Recomendacion, AlertaRecomendacion, Sistema
+from app.models import Alerta, Regla, Recomendacion, AlertaRecomendacion, Sistema, ServicioWeb
 from app.schemas import (
     EventoSistemaCreate, EventoWebCreate,
     EventoSistemaOut, EventoWebOut,
@@ -93,13 +93,15 @@ async def recibir_evento_sistema(
         "pid":        datos.pid,
     })
 
-    await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen)
-
+    # Obtener usuario_id del sistema
     result = await db.execute(select(Sistema).where(Sistema.id == datos.sistema_id))
     sistema = result.scalar_one_or_none()
+    usuario_id = sistema.usuario_id if sistema else None
+    
     if sistema:
         sistema.ultimo_contacto = now
 
+    await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen, usuario_id)
     await db.commit()
 
     return {
@@ -139,7 +141,12 @@ async def recibir_evento_web(
         "tiempo_ms":       datos.tiempo_ms,
     })
 
-    await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen)
+    # Obtener usuario_id del servicio web
+    result = await db.execute(select(ServicioWeb).where(ServicioWeb.id == datos.servicio_web_id))
+    servicio_web = result.scalar_one_or_none()
+    usuario_id = servicio_web.usuario_id if servicio_web else None
+
+    await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen, usuario_id)
     await db.commit()
 
     return {
@@ -160,13 +167,16 @@ async def _evaluar_reglas_raw(
     tipo: str,
     valor: float | None,
     origen: str | None,
+    usuario_id: UUID | None = None,
 ) -> None:
     if valor is None:
         return
 
-    result = await db.execute(
-        select(Regla).where(Regla.activa == True, Regla.metrica == tipo)
-    )
+    q = select(Regla).where(Regla.activa == True, Regla.metrica == tipo)
+    if usuario_id:
+        q = q.where(Regla.usuario_id == usuario_id)
+    
+    result = await db.execute(q)
     reglas = result.scalars().all()
 
     for regla in reglas:

@@ -355,12 +355,14 @@ export default function Alertas() {
   async function cargarAlertas() {
     setLoading(true)
     try {
-      const params = filtro === 'pendientes'
-        ? '?resuelta=false'
-        : filtro === 'resueltas'
-        ? '?resuelta=true'
-        : ''
-      const { data } = await client.get(`/api/alertas/${params}&limite=100`)
+      const url = new URL('/api/alertas', window.location.origin)
+      if (filtro === 'pendientes') {
+        url.searchParams.append('resuelta', 'false')
+      } else if (filtro === 'resueltas') {
+        url.searchParams.append('resuelta', 'true')
+      }
+      url.searchParams.append('limite', '100')
+      const { data } = await client.get(url.pathname + url.search)
       setAlertas(data)
     } catch (err) {
       console.error(err)

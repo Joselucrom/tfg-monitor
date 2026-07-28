@@ -47,6 +47,7 @@ CREATE TABLE sistemas (
     ip               VARCHAR(45),
     descripcion      TEXT,
     activo           BOOLEAN      NOT NULL DEFAULT TRUE,
+    intervalo_s      INT          NOT NULL DEFAULT 30,
     ultimo_contacto  TIMESTAMPTZ,
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );

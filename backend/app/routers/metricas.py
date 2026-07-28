@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
@@ -9,7 +9,6 @@ from app.models import MetricaSnapshot, Sistema
 from app.schemas import MetricaSnapshotCreate, MetricaSnapshotOut
 from app.routers.auth import get_current_user
 from datetime import datetime, timedelta, timezone
-from fastapi import Query
 
 router = APIRouter()
 
@@ -24,6 +23,14 @@ async def historico_sistema(
     Devuelve los snapshots de un sistema en la ventana de tiempo indicada.
     Usado por las gráficas del dashboard y la vista de sistemas.
     """
+    # Validar que el sistema pertenece al usuario actual
+    result = await db.execute(
+        select(Sistema).where(Sistema.id == sistema_id, Sistema.usuario_id == current_user.id)
+    )
+    sistema = result.scalar_one_or_none()
+    if not sistema:
+        raise HTTPException(status_code=404, detail="Sistema no encontrado")
+    
     desde = datetime.now(timezone.utc) - timedelta(minutes=minutos)
     result = await db.execute(
         select(MetricaSnapshot)
@@ -42,14 +49,31 @@ async def listar_snapshots(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Lista snapshots de métricas. Filtra por sistema si se indica."""
-    q = (
-        select(MetricaSnapshot)
-        .order_by(MetricaSnapshot.timestamp.desc())
-        .limit(limite)
-    )
+    """Lista snapshots de métricas. Filtra por sistema y usuario actual."""
     if sistema_id:
-        q = q.where(MetricaSnapshot.sistema_id == sistema_id)
+        # Validar que el sistema pertenece al usuario actual
+        result = await db.execute(
+            select(Sistema).where(Sistema.id == sistema_id, Sistema.usuario_id == current_user.id)
+        )
+        sistema = result.scalar_one_or_none()
+        if not sistema:
+            raise HTTPException(status_code=404, detail="Sistema no encontrado")
+        
+        q = (
+            select(MetricaSnapshot)
+            .where(MetricaSnapshot.sistema_id == sistema_id)
+            .order_by(MetricaSnapshot.timestamp.desc())
+            .limit(limite)
+        )
+    else:
+        # Listar snapshots solo de sistemas del usuario actual
+        q = (
+            select(MetricaSnapshot)
+            .join(Sistema)
+            .where(Sistema.usuario_id == current_user.id)
+            .order_by(MetricaSnapshot.timestamp.desc())
+            .limit(limite)
+        )
     result = await db.execute(q)
     return result.scalars().all()
 
@@ -61,6 +85,14 @@ async def ultimo_snapshot(
     current_user=Depends(get_current_user),
 ):
     """Devuelve el snapshot más reciente de un sistema."""
+    # Validar que el sistema pertenece al usuario actual
+    result = await db.execute(
+        select(Sistema).where(Sistema.id == sistema_id, Sistema.usuario_id == current_user.id)
+    )
+    sistema = result.scalar_one_or_none()
+    if not sistema:
+        raise HTTPException(status_code=404, detail="Sistema no encontrado")
+    
     result = await db.execute(
         select(MetricaSnapshot)
         .where(MetricaSnapshot.sistema_id == sistema_id)
@@ -69,7 +101,6 @@ async def ultimo_snapshot(
     )
     snapshot = result.scalar_one_or_none()
     if not snapshot:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="No hay snapshots para este sistema")
     return snapshot
 
@@ -82,7 +113,18 @@ async def guardar_snapshot(
     """
     El agente envía un snapshot periódico de métricas aquí.
     No requiere JWT — en producción usar API key.
+    Valida que el sistema exista y esté activo.
     """
+    # Validar que el sistema existe y está activo
+    result = await db.execute(
+        select(Sistema).where(Sistema.id == datos.sistema_id)
+    )
+    sistema = result.scalar_one_or_none()
+    if not sistema:
+        raise HTTPException(status_code=404, detail="Sistema no encontrado")
+    if not sistema.activo:
+        raise HTTPException(status_code=403, detail="Sistema desactivado")
+    
     snapshot = MetricaSnapshot(
         sistema_id    = datos.sistema_id,
         cpu_percent   = datos.cpu_percent,
@@ -92,12 +134,7 @@ async def guardar_snapshot(
     db.add(snapshot)
 
     # Actualizar ultimo_contacto del sistema
-    result = await db.execute(
-        select(Sistema).where(Sistema.id == datos.sistema_id)
-    )
-    sistema = result.scalar_one_or_none()
-    if sistema:
-        sistema.ultimo_contacto = datetime.now(timezone.utc)
+    sistema.ultimo_contacto = datetime.now(timezone.utc)
 
     await db.commit()
     await db.refresh(snapshot)

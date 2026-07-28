@@ -50,6 +50,12 @@ async def test_engine():
                 sistemas, servicios_web, usuarios
             CASCADE
         """))
+        await conn.execute(text(
+            "ALTER TABLE sistemas ADD COLUMN IF NOT EXISTS intervalo_s INT NOT NULL DEFAULT 30"
+        ))
+        await conn.execute(text(
+            "ALTER TABLE servicios_web ADD COLUMN IF NOT EXISTS intervalo_s INT NOT NULL DEFAULT 60"
+        ))
 
     yield engine
     await engine.dispose()

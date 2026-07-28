@@ -100,6 +100,7 @@ class Sistema(Base):
     ip              : Mapped[Optional[str]]      = mapped_column(String(45))
     descripcion     : Mapped[Optional[str]]      = mapped_column(Text)
     activo          : Mapped[bool]               = mapped_column(Boolean, default=True)
+    intervalo_s     : Mapped[int]                = mapped_column(Integer, default=30)
     ultimo_contacto : Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at      : Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
