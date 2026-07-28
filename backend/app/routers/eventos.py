@@ -73,6 +73,14 @@ async def recibir_evento_sistema(
     datos: EventoSistemaCreate,
     db: AsyncSession = Depends(get_db),
 ):
+    # Verificar que el sistema existe y está activo
+    result = await db.execute(select(Sistema).where(Sistema.id == datos.sistema_id))
+    sistema = result.scalar_one_or_none()
+    if not sistema:
+        raise HTTPException(status_code=404, detail="Sistema no encontrado")
+    if not sistema.activo:
+        raise HTTPException(status_code=403, detail="Sistema inactivo")
+
     evento_id = uuid4()
     now = datetime.now(timezone.utc)
 
@@ -93,13 +101,8 @@ async def recibir_evento_sistema(
         "pid":        datos.pid,
     })
 
-    # Obtener usuario_id del sistema
-    result = await db.execute(select(Sistema).where(Sistema.id == datos.sistema_id))
-    sistema = result.scalar_one_or_none()
-    usuario_id = sistema.usuario_id if sistema else None
-    
-    if sistema:
-        sistema.ultimo_contacto = now
+    usuario_id = sistema.usuario_id
+    sistema.ultimo_contacto = now
 
     await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen, usuario_id)
     await db.commit()
@@ -121,6 +124,14 @@ async def recibir_evento_web(
     datos: EventoWebCreate,
     db: AsyncSession = Depends(get_db),
 ):
+    # Verificar que el servicio web existe y está activo
+    result = await db.execute(select(ServicioWeb).where(ServicioWeb.id == datos.servicio_web_id))
+    servicio_web = result.scalar_one_or_none()
+    if not servicio_web:
+        raise HTTPException(status_code=404, detail="Servicio web no encontrado")
+    if not servicio_web.activo:
+        raise HTTPException(status_code=403, detail="Servicio web inactivo")
+
     evento_id = uuid4()
     now = datetime.now(timezone.utc)
 
@@ -141,10 +152,7 @@ async def recibir_evento_web(
         "tiempo_ms":       datos.tiempo_ms,
     })
 
-    # Obtener usuario_id del servicio web
-    result = await db.execute(select(ServicioWeb).where(ServicioWeb.id == datos.servicio_web_id))
-    servicio_web = result.scalar_one_or_none()
-    usuario_id = servicio_web.usuario_id if servicio_web else None
+    usuario_id = servicio_web.usuario_id
 
     await _evaluar_reglas_raw(db, evento_id, datos.tipo.value, datos.valor, datos.origen, usuario_id)
     await db.commit()

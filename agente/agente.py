@@ -237,13 +237,12 @@ def check_servicios_web(client: httpx.Client) -> None:
 
 def _check_url(client: httpx.Client, url: str) -> None:
     """Hace un GET a la URL y evalúa la respuesta."""
-    # Necesitamos el servicio_web_id — en producción se obtendría
-    # de la API consultando la URL. Para simplificar usamos un
-    # endpoint de búsqueda por URL.
-    servicio_web_id = _buscar_servicio_web_id(client, url)
-    if not servicio_web_id:
+    # Obtener info del servicio (incluye id e intervalo_s) desde el endpoint público
+    info = _buscar_servicio_web_info(client, url)
+    if not info or not info.get("id"):
         log_error(f"No se encontró servicio web para URL: {url}")
         return
+    servicio_web_id = info.get("id")
 
     try:
         inicio = time.time()
@@ -251,9 +250,9 @@ def _check_url(client: httpx.Client, url: str) -> None:
         tiempo_ms = int((time.time() - inicio) * 1000)
 
         if not r.is_success:
-            # Servicio caído o error HTTP
+            # Servicio caído o error HTTP — valor binario 1.0 para down
             _enviar_evento_web(client, servicio_web_id, "http_down",
-                               valor=float(r.status_code),
+                               valor=1.0,
                                http_status=r.status_code, tiempo_ms=tiempo_ms,
                                origen=url)
             log(f"HTTP DOWN: {url} → {r.status_code}")
@@ -270,26 +269,30 @@ def _check_url(client: httpx.Client, url: str) -> None:
             log(f"HTTP OK: {url} → {r.status_code} ({tiempo_ms}ms)")
 
     except httpx.TimeoutException:
+        # Timeout => treat as service down (binary)
         _enviar_evento_web(client, servicio_web_id, "http_down",
-                           valor=float(TIMEOUT_HTTP * 2000),
-                           http_status=0, tiempo_ms=int(TIMEOUT_HTTP * 2000),
+                           valor=1.0,
+                           http_status=0, tiempo_ms=int(TIMEOUT_HTTP * 1000),
                            origen=url)
         log_error(f"HTTP TIMEOUT: {url}")
 
     except httpx.RequestError as e:
+        # Network error => consider as down
         _enviar_evento_web(client, servicio_web_id, "http_down",
-                           valor=0.0,
+                           valor=1.0,
                            http_status=0, tiempo_ms=0, origen=url)
         log_error(f"HTTP ERROR: {url} — {e}")
 
 
-def _buscar_servicio_web_id(client: httpx.Client, url: str) -> str | None:
-    """Consulta el backend para obtener el UUID del servicio web por URL."""
+def _buscar_servicio_web_info(client: httpx.Client, url: str) -> dict | None:
+    """Consulta el backend para obtener los datos del servicio web por URL.
+    Este endpoint es público y devuelve `intervalo_s` cuando existe.
+    """
     try:
         r = client.get(f"{BACKEND_URL}/api/servicios-web/buscar",
                        params={"url": url}, timeout=5)
         if r.status_code == 200:
-            return r.json().get("id")
+            return r.json()
     except httpx.RequestError:
         pass
     return None
@@ -342,6 +345,30 @@ def obtener_intervalo_sistema(client: httpx.Client) -> int:
     return INTERVALO
 
 
+def obtener_intervalo_desde_servicios(client: httpx.Client) -> int:
+    """Calcula el intervalo del agente usando los `intervalo_s` de cada servicio.
+    Retorna el mínimo razonable (pero al menos 10s) para no sobrecargar.
+    Si no hay datos, devuelve el `INTERVALO` por defecto.
+    """
+    if not URLS_VIGILAR:
+        return INTERVALO
+    valores: list[int] = []
+    for url in URLS_VIGILAR:
+        info = _buscar_servicio_web_info(client, url)
+        if info is None:
+            continue
+        try:
+            val = int(info.get("intervalo_s", 0) or 0)
+            if val > 0:
+                valores.append(val)
+        except (TypeError, ValueError):
+            continue
+    if not valores:
+        return INTERVALO
+    # No permitir intervalos demasiado bajos
+    return max(10, min(valores))
+
+
 # ══════════════════════════════════════════════════════════
 # Bucle principal
 # ══════════════════════════════════════════════════════════
@@ -362,7 +389,10 @@ def main() -> None:
     intervalo_actual = INTERVALO
     try:
         with httpx.Client(timeout=5) as client:
-            intervalo_actual = obtener_intervalo_sistema(client)
+            if URLS_VIGILAR:
+                intervalo_actual = obtener_intervalo_desde_servicios(client)
+            else:
+                intervalo_actual = obtener_intervalo_sistema(client)
             r = client.patch(
                 f"{BACKEND_URL}/api/sistemas/{SISTEMA_ID}/ip",
                 json={"ip": ip_local}
@@ -387,7 +417,10 @@ def main() -> None:
             check_servicios_web(client)
             
             # Actualizar intervalo dinámico después de cada ciclo
-            intervalo_actual = obtener_intervalo_sistema(client)
+            if URLS_VIGILAR:
+                intervalo_actual = obtener_intervalo_desde_servicios(client)
+            else:
+                intervalo_actual = obtener_intervalo_sistema(client)
 
         log(f"Ciclo completado — próximo en {intervalo_actual}s")
         time.sleep(intervalo_actual)
