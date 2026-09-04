@@ -356,13 +356,15 @@ export default function Alertas() {
     setLoading(true)
     try {
       const url = new URL('/api/alertas', window.location.origin)
+      // Asegurarnos de pedir la ruta con barra final para evitar redirect 307
+      const listaPath = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/'
       if (filtro === 'pendientes') {
         url.searchParams.append('resuelta', 'false')
       } else if (filtro === 'resueltas') {
         url.searchParams.append('resuelta', 'true')
       }
       url.searchParams.append('limite', '100')
-      const { data } = await client.get(url.pathname + url.search)
+      const { data } = await client.get(listaPath + url.search)
       setAlertas(data)
     } catch (err) {
       console.error(err)
