@@ -148,8 +148,20 @@ async def eliminar_sistema(
     (snapshots y eventos por CASCADE en BD).
     """
     sistema = await _get_or_404(db, sistema_id, current_user.id)
-    await db.delete(sistema)
-    await db.commit()
+    try:
+        # Use a direct DELETE SQL to avoid SQLAlchemy loading Evento rows
+        # which currently use the `tipo` column as polymorphic discriminator
+        # and may contain values not mapped to subclasses. Rely on DB-level
+        # ON DELETE CASCADE to remove related rows.
+        await db.execute(text("DELETE FROM sistemas WHERE id = :id"), {"id": sistema_id})
+        await db.commit()
+    except Exception as e:
+        # Log full traceback server-side and return a 500 with a short message
+        import traceback
+        tb = traceback.format_exc()
+        print(f"Error al eliminar sistema {sistema_id}: {e}\n{tb}")
+        # Re-raise as HTTPException with generic detail to avoid leaking sensitive info
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ══════════════════════════════════════════════════════════

@@ -190,6 +190,8 @@ export default function Sistemas() {
   const [sistemas,   setSistemas]   = useState([])
   const [snapshots,  setSnapshots]  = useState({})
   const [loading,    setLoading]    = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
+  const [toast, setToast] = useState(null)
   const [modalAbrir, setModalAbrir] = useState(false)
   const [modalInstrucciones, setModalInstrucciones] = useState(null)
   const [sistemaDetalle, setSistemaDetalle] = useState(null)
@@ -235,10 +237,19 @@ export default function Sistemas() {
   async function eliminarSistema(id) {
     if (!confirm('¿Eliminar este sistema? Se borrarán todos sus datos.')) return
     try {
+      setDeletingId(id)
       await client.delete(`/api/sistemas/${id}`)
-      cargarSistemas()
+      setToast('Sistema eliminado')
+      setTimeout(() => setToast(null), 2500)
+      await cargarSistemas()
     } catch (err) {
       console.error(err)
+      const detail = err.response?.data?.detail || err.message || 'Error al eliminar el sistema.'
+      setToast(detail)
+      setTimeout(() => setToast(null), 5000)
+      // If 401, redirect handled by client interceptor; otherwise log for debugging
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -328,10 +339,11 @@ export default function Sistemas() {
                               event.stopPropagation()
                               eliminarSistema(s.id)
                             }}
-                            className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                            disabled={deletingId === s.id}
+                            className={`text-xs text-red-400 hover:text-red-600 transition-colors ${deletingId === s.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                             title="Eliminar"
                           >
-                            Eliminar
+                            {deletingId === s.id ? 'Eliminando...' : 'Eliminar'}
                           </button>
                           <button
                             onClick={(event) => {
@@ -383,6 +395,13 @@ export default function Sistemas() {
                 nombreSistema={sistemaDetalle.nombre}
               />
             </div>
+          </div>
+        )}
+        {toast && (
+          <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white
+                          text-sm px-4 py-3 rounded-lg shadow-lg
+                          animate-fade-in transition-all duration-300">
+            {toast}
           </div>
         )}
       </div>
