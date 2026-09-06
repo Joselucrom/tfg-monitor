@@ -87,7 +87,7 @@ export function GraficaSistema({ sistemaId, nombreSistema }) {
                 className={`text-xs px-2 py-1 rounded-full border transition-colors ${
                   activa
                     ? 'text-white border-transparent'
-                    : 'bg-white text-gray-400 border-gray-200'
+                    : 'bg-white text-gray-600 border-gray-200'
                 }`}
                 style={activa ? { backgroundColor: COLORES_METRICAS[key] } : {}}
               >
@@ -104,7 +104,7 @@ export function GraficaSistema({ sistemaId, nombreSistema }) {
                 className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
                   ventana === v.minutos
                     ? 'bg-white text-gray-900 shadow-sm font-medium'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-700 hover:text-gray-700'
                 }`}
               >
                 {v.label}
@@ -115,11 +115,11 @@ export function GraficaSistema({ sistemaId, nombreSistema }) {
       </div>
 
       {loading ? (
-        <div className="h-48 flex items-center justify-center text-xs text-gray-400">
+        <div className="h-48 flex items-center justify-center text-xs text-gray-600">
           Cargando datos...
         </div>
       ) : datos.length === 0 ? (
-        <div className="h-48 flex items-center justify-center text-xs text-gray-400">
+        <div className="h-48 flex items-center justify-center text-xs text-gray-600">
           Sin datos en este período — el agente debe estar en ejecución
         </div>
       ) : (
@@ -267,7 +267,7 @@ export function GraficaDashboard({ sistemas }) {
                 className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
                   metrica === m.value
                     ? 'bg-white text-gray-900 shadow-sm font-medium'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-700 hover:text-gray-700'
                 }`}
               >
                 {m.label}
@@ -283,7 +283,7 @@ export function GraficaDashboard({ sistemas }) {
                 className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
                   ventana === v.minutos
                     ? 'bg-white text-gray-900 shadow-sm font-medium'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-700 hover:text-gray-700'
                 }`}
               >
                 {v.label}
@@ -294,11 +294,11 @@ export function GraficaDashboard({ sistemas }) {
       </div>
 
       {loading ? (
-        <div className="h-48 flex items-center justify-center text-xs text-gray-400">
+        <div className="h-48 flex items-center justify-center text-xs text-gray-600">
           Cargando datos...
         </div>
       ) : datos.length === 0 ? (
-        <div className="h-48 flex items-center justify-center text-xs text-gray-400">
+        <div className="h-48 flex items-center justify-center text-xs text-gray-600">
           Sin datos en este período — el agente debe estar en ejecución
         </div>
       ) : (

@@ -51,7 +51,7 @@ export default function ModalPerfil({ usuario, onClose }) {
           <h2 className="text-base font-medium text-gray-900">Mi perfil</h2>
           <button
             onClick={onClose}
-            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+            className="text-xs text-gray-600 hover:text-gray-700 transition-colors"
           >
             ✕
           </button>
@@ -65,7 +65,7 @@ export default function ModalPerfil({ usuario, onClose }) {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-800 truncate">{usuario?.nombre}</p>
-            <p className="text-xs text-gray-400 truncate">{usuario?.email}</p>
+            <p className="text-xs text-gray-600 truncate">{usuario?.email}</p>
             <span className={`text-xs px-1.5 py-0.5 rounded-full mt-0.5 inline-block ${
               usuario?.rol === 'admin'
                 ? 'bg-blue-50 text-blue-700'
@@ -83,7 +83,7 @@ export default function ModalPerfil({ usuario, onClose }) {
             className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${
               vista === 'perfil'
                 ? 'bg-white text-gray-900 shadow-sm font-medium'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-700 hover:text-gray-700'
             }`}
           >
             Datos
@@ -93,7 +93,7 @@ export default function ModalPerfil({ usuario, onClose }) {
             className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${
               vista === 'password'
                 ? 'bg-white text-gray-900 shadow-sm font-medium'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-700 hover:text-gray-700'
             }`}
           >
             Cambiar contraseña
@@ -104,19 +104,19 @@ export default function ModalPerfil({ usuario, onClose }) {
         {vista === 'perfil' && (
           <div className="space-y-3">
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-0.5">Nombre</p>
+              <p className="text-xs text-gray-600 mb-0.5">Nombre</p>
               <p className="text-sm text-gray-800">{usuario?.nombre}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-0.5">Email</p>
+              <p className="text-xs text-gray-600 mb-0.5">Email</p>
               <p className="text-sm text-gray-800">{usuario?.email}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-0.5">Rol</p>
+              <p className="text-xs text-gray-600 mb-0.5">Rol</p>
               <p className="text-sm text-gray-800 capitalize">{usuario?.rol}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-400 mb-0.5">Cuenta creada</p>
+              <p className="text-xs text-gray-600 mb-0.5">Cuenta creada</p>
               <p className="text-sm text-gray-800">
                 {usuario?.created_at
                   ? new Date(usuario.created_at).toLocaleDateString('es-ES', {
@@ -140,7 +140,7 @@ export default function ModalPerfil({ usuario, onClose }) {
             )}
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Contraseña actual *</label>
+              <label className="block text-xs text-gray-700 mb-1">Contraseña actual *</label>
               <input
                 type="password"
                 required
@@ -153,7 +153,7 @@ export default function ModalPerfil({ usuario, onClose }) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Nueva contraseña *</label>
+              <label className="block text-xs text-gray-700 mb-1">Nueva contraseña *</label>
               <input
                 type="password"
                 required
@@ -166,7 +166,7 @@ export default function ModalPerfil({ usuario, onClose }) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Confirmar nueva contraseña *</label>
+              <label className="block text-xs text-gray-700 mb-1">Confirmar nueva contraseña *</label>
               <input
                 type="password"
                 required

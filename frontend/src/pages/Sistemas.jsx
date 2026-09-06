@@ -5,13 +5,13 @@ import client from '../api/client'
 
 function BadgeEstado({ sistema, snap }) {
   if (!sistema.activo)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">inactivo</span>
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">inactivo</span>
   if (!snap)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">sin datos</span>
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">sin datos</span>
   if (snap.cpu_percent >= 90 || snap.ram_percent >= 90)
     return <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700">crítico</span>
   if (snap.cpu_percent >= 75 || snap.ram_percent >= 75)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">alerta</span>
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">alerta</span>
   return <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">OK</span>
 }
 
@@ -45,7 +45,7 @@ python agente.py`
         <h2 className="text-base font-medium text-gray-900 mb-1">
           Instrucciones de instalación del agente
         </h2>
-        <p className="text-xs text-gray-400 mb-4">
+        <p className="text-xs text-gray-600 mb-4">
           Ejecuta estos comandos en el servidor <strong>{sistema.nombre}</strong>
         </p>
 
@@ -54,9 +54,10 @@ python agente.py`
             {comandos}
           </pre>
           <button
+            type="button"
             onClick={copiar}
             className="absolute top-3 right-3 text-xs px-2 py-1 rounded
-                       bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                       bg-gray-700 text-white hover:bg-gray-600 transition-colors"
           >
             {copiado ? '✓ Copiado' : 'Copiar'}
           </button>
@@ -89,7 +90,7 @@ function BarraMetrica({ valor, umbral = 85 }) {
       <div className="w-16 h-1.5 bg-gray-200 rounded-full">
         <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${Math.min(valor, 100)}%` }} />
       </div>
-      <span className="text-xs text-gray-500">{valor?.toFixed(0)}%</span>
+      <span className="text-xs text-gray-700">{valor?.toFixed(0)}%</span>
     </div>
   )
 }
@@ -131,7 +132,7 @@ function ModalCrear({ onClose, onCreado }) {
         )}
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Nombre *</label>
+            <label className="block text-xs text-gray-700 mb-1">Nombre *</label>
             <input
               required
               value={form.nombre}
@@ -142,7 +143,7 @@ function ModalCrear({ onClose, onCreado }) {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">IP</label>
+            <label className="block text-xs text-gray-700 mb-1">IP</label>
             <input
               value={form.ip}
               onChange={e => setForm({ ...form, ip: e.target.value })}
@@ -152,7 +153,7 @@ function ModalCrear({ onClose, onCreado }) {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Descripción</label>
+            <label className="block text-xs text-gray-700 mb-1">Descripción</label>
             <textarea
               value={form.descripcion}
               onChange={e => setForm({ ...form, descripcion: e.target.value })}
@@ -260,7 +261,7 @@ export default function Sistemas() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Sistemas</h1>
-            <p className="text-xs text-gray-400 mt-0.5">{sistemas.length} sistemas registrados</p>
+            <p className="text-xs text-gray-600 mt-0.5">{sistemas.length} sistemas registrados</p>
           </div>
           <button
             onClick={() => setModalAbrir(true)}
@@ -272,10 +273,10 @@ export default function Sistemas() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-400">Cargando...</p>
+          <p className="text-sm text-gray-600">Cargando...</p>
         ) : sistemas.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-200 rounded-xl">
-            <p className="text-sm text-gray-400">No hay sistemas registrados</p>
+            <p className="text-sm text-gray-600">No hay sistemas registrados</p>
             <p className="text-xs text-gray-300 mt-1">
               Crea uno y configura el agente para empezar a monitorizar
             </p>
@@ -284,15 +285,15 @@ export default function Sistemas() {
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-gray-50 text-xs text-gray-400 font-medium">
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">IP</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">CPU</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">RAM</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Disco</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Último contacto</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Estado</th>
-                  <th className="px-4 py-3 border-b border-gray-200 w-24"></th>
+                <tr className="bg-gray-50 text-xs text-gray-700 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">IP</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">CPU</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">RAM</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Disco</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Último contacto</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Estado</th>
+                  <th scope="col" className="px-4 py-3 border-b border-gray-200 w-24"></th>
                 </tr>
               </thead>
               <tbody>
@@ -306,7 +307,7 @@ export default function Sistemas() {
                                   cursor-pointer hover:bg-blue-50/30 transition-colors`}
                     >
                       <td className="px-4 py-3 font-medium text-gray-800">{s.nombre}</td>
-                      <td className="px-4 py-3 text-gray-500">{s.ip || '—'}</td>
+                      <td className="px-4 py-3 text-gray-700">{s.ip || '—'}</td>
                       <td className="px-4 py-3">
                         {snap ? <BarraMetrica valor={snap.cpu_percent} /> : <span className="text-gray-300 text-xs">—</span>}
                       </td>
@@ -316,7 +317,7 @@ export default function Sistemas() {
                       <td className="px-4 py-3">
                         {snap ? <BarraMetrica valor={snap.disco_percent} /> : <span className="text-gray-300 text-xs">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">
+                      <td className="px-4 py-3 text-gray-600 text-xs">
                         {tiempoRelativo(s.ultimo_contacto)}
                       </td>
                       <td className="px-4 py-3">
@@ -325,32 +326,38 @@ export default function Sistemas() {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           <button
+                            type="button"
                             onClick={(event) => {
                               event.stopPropagation()
                               toggleSistema(s)
                             }}
-                            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                            aria-label={s.activo ? `Desactivar sistema ${s.nombre}` : `Activar sistema ${s.nombre}`}
+                            className="text-xs text-gray-600 hover:text-gray-700 transition-colors"
                             title={s.activo ? 'Desactivar' : 'Activar'}
                           >
                             {s.activo ? 'Desactivar' : 'Activar'}
                           </button>
                           <button
+                            type="button"
                             onClick={(event) => {
                               event.stopPropagation()
                               eliminarSistema(s.id)
                             }}
                             disabled={deletingId === s.id}
-                            className={`text-xs text-red-400 hover:text-red-600 transition-colors ${deletingId === s.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-label={`Eliminar sistema ${s.nombre}`}
+                            className={`text-xs text-red-600 hover:text-red-700 transition-colors ${deletingId === s.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                             title="Eliminar"
                           >
                             {deletingId === s.id ? 'Eliminando...' : 'Eliminar'}
                           </button>
                           <button
+                            type="button"
                             onClick={(event) => {
                               event.stopPropagation()
                               setModalInstrucciones(s)
                             }}
-                            className="text-xs text-green-600 hover:underline"
+                            aria-label={`Instalar agente en ${s.nombre}`}
+                            className="text-xs text-green-700 hover:underline"
                           >
                             Instalar agente
                           </button>
@@ -385,7 +392,7 @@ export default function Sistemas() {
                 </h2>
                 <button
                   onClick={() => setSistemaDetalle(null)}
-                  className="text-xs text-gray-400 hover:text-gray-700"
+                  className="text-xs text-gray-600 hover:text-gray-700"
                 >
                   ✕ Cerrar
                 </button>

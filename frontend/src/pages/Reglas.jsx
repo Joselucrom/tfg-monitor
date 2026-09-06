@@ -87,7 +87,7 @@ function ModalRegla({ regla, onClose, onGuardado }) {
           {editando ? 'Editar regla' : 'Nueva regla'}
         </h2>
         {editando && (
-          <p className="text-xs text-gray-400 mb-4">
+          <p className="text-xs text-gray-600 mb-4">
             El nombre y la métrica no se pueden cambiar. Crea una nueva regla si necesitas algo distinto.
           </p>
         )}
@@ -97,14 +97,15 @@ function ModalRegla({ regla, onClose, onGuardado }) {
           <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg mb-3">{error}</p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-3" aria-label={editando ? 'Editar regla' : 'Crear regla'}>
 
           {/* Nombre — bloqueado al editar */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label htmlFor="regla-nombre" className="block text-xs text-gray-700 mb-1">
               Nombre {!editando && '*'}
             </label>
             <input
+              id="regla-nombre"
               required={!editando}
               disabled={editando}
               value={form.nombre}
@@ -113,7 +114,7 @@ function ModalRegla({ regla, onClose, onGuardado }) {
               className={`w-full px-3 py-2 border rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-blue-500
                          ${editando
-                           ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                           ? 'border-gray-100 bg-gray-50 text-gray-600 cursor-not-allowed'
                            : 'border-gray-200'
                          }`}
             />
@@ -122,15 +123,16 @@ function ModalRegla({ regla, onClose, onGuardado }) {
           <div className="grid grid-cols-2 gap-3">
             {/* Métrica — bloqueada al editar */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">
+              <label htmlFor="regla-metrica" className="block text-xs text-gray-700 mb-1">
                 Métrica {!editando && '*'}
               </label>
               {editando ? (
-                <div className="px-3 py-2 border border-gray-100 bg-gray-50 rounded-lg text-sm text-gray-400 cursor-not-allowed">
+                <div id="regla-metrica" className="px-3 py-2 border border-gray-100 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
                   {METRICAS.find(m => m.value === form.metrica)?.label || form.metrica}
                 </div>
               ) : (
                 <select
+                  id="regla-metrica"
                   value={form.metrica}
                   onChange={e => handleMetricaChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
@@ -145,8 +147,9 @@ function ModalRegla({ regla, onClose, onGuardado }) {
 
             {/* Severidad — siempre editable */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Severidad *</label>
+              <label htmlFor="regla-severidad" className="block text-xs text-gray-700 mb-1">Severidad *</label>
               <select
+                id="regla-severidad"
                 value={form.severidad}
                 onChange={e => setForm({ ...form, severidad: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
@@ -170,8 +173,9 @@ function ModalRegla({ regla, onClose, onGuardado }) {
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Operador *</label>
+                <label htmlFor="regla-operador" className="block text-xs text-gray-700 mb-1">Operador *</label>
                 <select
+                  id="regla-operador"
                   value={form.operador}
                   onChange={e => setForm({ ...form, operador: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
@@ -183,13 +187,14 @@ function ModalRegla({ regla, onClose, onGuardado }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
+                <label htmlFor="regla-umbral" className="block text-xs text-gray-700 mb-1">
                   Umbral * {
                     form.metrica === 'login_fallido' ? '(intentos)' :
                     form.metrica === 'http_lento'    ? '(ms)'       : '(%)'
                   }
                 </label>
                 <input
+                  id="regla-umbral"
                   type="number"
                   required
                   min="0"
@@ -206,7 +211,7 @@ function ModalRegla({ regla, onClose, onGuardado }) {
 
           {/* Vista previa */}
           <div className="bg-gray-50 rounded-lg px-3 py-2">
-            <p className="text-xs text-gray-400 mb-0.5">Vista previa</p>
+            <p className="text-xs text-gray-600 mb-0.5">Vista previa</p>
             <code className="text-xs text-gray-700">
               {binaria
                 ? `Si ocurre ${form.metrica} → alerta ${form.severidad}`
@@ -283,7 +288,7 @@ export default function Reglas() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Reglas y umbrales</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               El motor evalúa estas reglas en cada evento recibido
             </p>
           </div>
@@ -297,10 +302,10 @@ export default function Reglas() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-400">Cargando...</p>
+          <p className="text-sm text-gray-600">Cargando...</p>
         ) : reglas.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-200 rounded-xl">
-            <p className="text-sm text-gray-400">No hay reglas configuradas</p>
+            <p className="text-sm text-gray-600">No hay reglas configuradas</p>
             <p className="text-xs text-gray-300 mt-1">
               Crea una regla para empezar a recibir alertas automáticas
             </p>
@@ -310,13 +315,13 @@ export default function Reglas() {
             <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-xs text-gray-400 font-medium">
-                    <th className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
-                    <th className="text-left px-4 py-3 border-b border-gray-200">Métrica</th>
-                    <th className="text-left px-4 py-3 border-b border-gray-200">Condición</th>
-                    <th className="text-left px-4 py-3 border-b border-gray-200">Severidad</th>
-                    <th className="text-left px-4 py-3 border-b border-gray-200">Activa</th>
-                    <th className="px-4 py-3 border-b border-gray-200 w-32"></th>
+                  <tr className="bg-gray-50 text-xs text-gray-700 font-medium">
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Métrica</th>
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Condición</th>
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Severidad</th>
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Activa</th>
+                    <th scope="col" className="px-4 py-3 border-b border-gray-200 w-32"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -334,7 +339,7 @@ export default function Reglas() {
                       </td>
                       <td className="px-4 py-3">
                         {esBinaria(r.metrica) ? (
-                          <span className="text-xs text-gray-400 italic">al ocurrir</span>
+                          <span className="text-xs text-gray-600 italic">al ocurrir</span>
                         ) : (
                           <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
                             {r.operador} {r.umbral}
@@ -346,7 +351,10 @@ export default function Reglas() {
                       </td>
                       <td className="px-4 py-3">
                         <button
+                          type="button"
                           onClick={() => toggleRegla(r.id)}
+                          aria-label={r.activa ? `Desactivar regla ${r.nombre}` : `Activar regla ${r.nombre}`}
+                          aria-pressed={r.activa}
                           className={`relative inline-flex h-5 w-9 items-center rounded-full
                                       transition-colors focus:outline-none
                                       ${r.activa ? 'bg-green-500' : 'bg-gray-300'}`}
@@ -366,8 +374,9 @@ export default function Reglas() {
                             Editar
                           </button>
                           <button
+                            type="button"
                             onClick={() => eliminarRegla(r.id)}
-                            className="text-xs text-red-400 hover:text-red-600"
+                            className="text-xs text-red-600 hover:text-red-700"
                           >
                             Eliminar
                           </button>
@@ -379,7 +388,7 @@ export default function Reglas() {
               </table>
             </div>
 
-            <div className="flex gap-2 bg-gray-50 rounded-lg px-4 py-3 text-xs text-gray-500">
+            <div className="flex gap-2 bg-gray-50 rounded-lg px-4 py-3 text-xs text-gray-700">
               <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <circle cx="7" cy="7" r="6" stroke="#9CA3AF" strokeWidth="1"/>
                 <path d="M7 6v4M7 4v1" stroke="#9CA3AF" strokeWidth="1.2" strokeLinecap="round"/>

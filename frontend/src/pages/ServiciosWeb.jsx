@@ -5,7 +5,7 @@ import client from '../api/client'
 function BadgeEstado({ activo }) {
   return activo
     ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">activo</span>
-    : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">inactivo</span>
+    : <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">inactivo</span>
 }
 
 function ModalServicio({ servicio, onClose, onGuardado }) {
@@ -50,7 +50,7 @@ function ModalServicio({ servicio, onClose, onGuardado }) {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Nombre *</label>
+            <label className="block text-xs text-gray-700 mb-1">Nombre *</label>
             <input
               required
               value={form.nombre}
@@ -62,7 +62,7 @@ function ModalServicio({ servicio, onClose, onGuardado }) {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">URL *</label>
+            <label className="block text-xs text-gray-700 mb-1">URL *</label>
             <input
               required
               type="url"
@@ -75,7 +75,7 @@ function ModalServicio({ servicio, onClose, onGuardado }) {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label className="block text-xs text-gray-700 mb-1">
               Intervalo de comprobación (segundos) *
             </label>
             <input
@@ -88,7 +88,7 @@ function ModalServicio({ servicio, onClose, onGuardado }) {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-400 mt-1">Mínimo 10 segundos. Recomendado: 60s</p>
+            <p className="text-xs text-gray-600 mt-1">Mínimo 10 segundos. Recomendado: 60s</p>
           </div>
 
           <div className="flex gap-2 pt-1">
@@ -162,7 +162,7 @@ python agente.py`
         <h2 className="text-base font-medium text-gray-900 mb-1">
           Instrucciones de monitorización web
         </h2>
-        <p className="text-xs text-gray-400 mb-4">
+        <p className="text-xs text-gray-600 mb-4">
           Configura el agente para vigilar <strong>{servicio.nombre}</strong> ({servicio.url})
         </p>
 
@@ -266,7 +266,7 @@ export default function ServiciosWeb() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Servicios web</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               URLs monitorizadas por el agente mediante HTTP checks
             </p>
           </div>
@@ -288,10 +288,10 @@ export default function ServiciosWeb() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-400">Cargando...</p>
+          <p className="text-sm text-gray-600">Cargando...</p>
         ) : servicios.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-200 rounded-xl">
-            <p className="text-sm text-gray-400">No hay servicios web registrados</p>
+            <p className="text-sm text-gray-600">No hay servicios web registrados</p>
             <p className="text-xs text-gray-300 mt-1">
               Añade una URL para empezar a monitorizar su disponibilidad
             </p>
@@ -300,7 +300,7 @@ export default function ServiciosWeb() {
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-gray-50 text-xs text-gray-400 font-medium">
+                <tr className="bg-gray-50 text-xs text-gray-600 font-medium">
                   <th className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
                   <th className="text-left px-4 py-3 border-b border-gray-200">URL</th>
                   <th className="text-left px-4 py-3 border-b border-gray-200">Intervalo</th>
@@ -326,7 +326,7 @@ export default function ServiciosWeb() {
                         {s.url}
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{s.intervalo_s}s</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">{s.intervalo_s}s</td>
                     <td className="px-4 py-3">
                       <BadgeEstado activo={s.activo} />
                     </td>
@@ -340,7 +340,7 @@ export default function ServiciosWeb() {
                         </button>
                         <button
                           onClick={() => toggleServicio(s)}
-                          className="text-xs text-gray-400 hover:text-gray-700"
+                          className="text-xs text-gray-600 hover:text-gray-700"
                         >
                           {s.activo ? 'Desactivar' : 'Activar'}
                         </button>

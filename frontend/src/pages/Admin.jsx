@@ -5,8 +5,8 @@ import client from '../api/client'
 function StatCard({ label, value, highlight }) {
   return (
     <div className={`rounded-lg p-4 ${highlight ? 'bg-amber-50' : 'bg-gray-50'}`}>
-      <p className={`text-xs mb-1 ${highlight ? 'text-amber-600' : 'text-gray-400'}`}>{label}</p>
-      <p className={`text-2xl font-medium ${highlight ? 'text-amber-800' : 'text-gray-900'}`}>
+      <p className={`text-xs mb-1 ${highlight ? 'text-amber-700' : 'text-gray-600'}`}>{label}</p>
+      <p className={`text-2xl font-medium ${highlight ? 'text-amber-900' : 'text-gray-900'}`}>
         {value ?? '—'}
       </p>
     </div>
@@ -20,7 +20,7 @@ function BarraRanking({ valor, max, color = 'bg-blue-400' }) {
       <div className="flex-1 h-1.5 bg-gray-200 rounded-full">
         <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-400 w-16 text-right shrink-0">{valor} eventos</span>
+      <span className="text-xs text-gray-600 w-16 text-right shrink-0">{valor} eventos</span>
     </div>
   )
 }
@@ -32,7 +32,7 @@ function BarraAlerta({ valor, max }) {
       <div className="flex-1 h-1.5 bg-gray-200 rounded-full">
         <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-400 w-16 text-right shrink-0">{valor} alertas</span>
+      <span className="text-xs text-gray-600 w-16 text-right shrink-0">{valor} alertas</span>
     </div>
   )
 }
@@ -85,7 +85,7 @@ export default function Admin() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+        <div className="flex items-center justify-center h-full text-gray-600 text-sm">
           Cargando...
         </div>
       </Layout>
@@ -100,7 +100,7 @@ export default function Admin() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Panel de administración</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Estadísticas globales de la plataforma</p>
+            <p className="text-xs text-gray-600 mt-0.5">Estadísticas globales de la plataforma</p>
           </div>
           <button
             onClick={cargarDatos}
@@ -132,7 +132,7 @@ export default function Admin() {
               Sistemas más monitorizados
             </h2>
             {topSis.length === 0 ? (
-              <p className="text-xs text-gray-400">Sin datos</p>
+              <p className="text-xs text-gray-600">Sin datos</p>
             ) : (
               <div className="space-y-3">
                 {topSis.map(s => (
@@ -153,7 +153,7 @@ export default function Admin() {
               Reglas más utilizadas
             </h2>
             {topReg.length === 0 ? (
-              <p className="text-xs text-gray-400">Sin datos</p>
+              <p className="text-xs text-gray-600">Sin datos</p>
             ) : (
               <div className="space-y-3">
                 {topReg.map(r => (
@@ -174,20 +174,20 @@ export default function Admin() {
           <div className="flex justify-between items-center px-4 py-3
                           border-b border-gray-200 bg-gray-50">
             <h2 className="text-sm font-medium text-gray-800">Gestión de usuarios</h2>
-            <span className="text-xs text-gray-400">{usuarios.length} usuarios</span>
+            <span className="text-xs text-gray-600">{usuarios.length} usuarios</span>
           </div>
 
           {usuarios.length === 0 ? (
-            <p className="text-sm text-gray-400 p-4">No hay usuarios</p>
+            <p className="text-sm text-gray-600 p-4">No hay usuarios</p>
           ) : (
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="text-xs text-gray-400 font-medium">
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Email</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Rol</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Estado</th>
-                  <th className="px-4 py-3 border-b border-gray-200 w-24"></th>
+                <tr className="text-xs text-gray-700 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Nombre</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Email</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Rol</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Estado</th>
+                  <th scope="col" className="px-4 py-3 border-b border-gray-200 w-24"></th>
                 </tr>
               </thead>
               <tbody>
@@ -198,7 +198,7 @@ export default function Admin() {
                                 ${!u.activo ? 'opacity-50' : ''}`}
                   >
                     <td className="px-4 py-3 font-medium text-gray-800">{u.nombre}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{u.email}</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">{u.email}</td>
                     <td className="px-4 py-3">
                       {u.rol === 'admin'
                         ? <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">admin</span>
@@ -215,7 +215,7 @@ export default function Admin() {
                       <button
                         onClick={() => toggleUsuario(u.id)}
                         disabled={togglingId === u.id}
-                        className="text-xs text-gray-400 hover:text-gray-700
+                        className="text-xs text-gray-600 hover:text-gray-700
                                    disabled:opacity-40 transition-colors"
                       >
                         {togglingId === u.id

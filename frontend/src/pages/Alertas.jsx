@@ -6,7 +6,7 @@ import client from '../api/client'
 function BadgeSeveridad({ severidad }) {
   const styles = {
     critical: 'bg-red-50 text-red-700',
-    warning:  'bg-amber-50 text-amber-700',
+    warning:  'bg-amber-100 text-amber-800',
     info:     'bg-blue-50 text-blue-700',
   }
   return (
@@ -96,7 +96,7 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
   return (
     <div className="p-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
+      <div className="flex items-center gap-2 text-xs text-gray-600 mb-4">
         <button onClick={onVolver} className="hover:text-gray-700 transition-colors">
           ← Alertas
         </button>
@@ -131,7 +131,7 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
                   <h3 className="text-base font-medium text-gray-900 mb-2">
                     ¿Marcar como resuelta?
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-sm text-gray-700 mb-4">
                     Esta acción no se puede deshacer. La alerta quedará cerrada definitivamente.
                   </p>
                   <div className="flex gap-2">
@@ -161,19 +161,19 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
       {/* Info */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-400 mb-1">Mensaje</p>
+          <p className="text-xs text-gray-600 mb-1">Mensaje</p>
           <p className="text-sm text-gray-800">{alerta.mensaje}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-400 mb-1">Severidad</p>
+          <p className="text-xs text-gray-600 mb-1">Severidad</p>
           <p className="text-sm font-medium text-gray-800 capitalize">{alerta.severidad}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-400 mb-1">Detectada</p>
+          <p className="text-xs text-gray-600 mb-1">Detectada</p>
           <p className="text-sm text-gray-800">{tiempoRelativo(alerta.timestamp)}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <p className="text-xs text-gray-400 mb-1">Estado</p>
+          <p className="text-xs text-gray-600 mb-1">Estado</p>
           <p className="text-sm text-gray-800">{alerta.resuelta ? `Resuelta ${tiempoRelativo(alerta.resuelta_at)}` : 'Pendiente'}</p>
         </div>
       </div>
@@ -203,7 +203,7 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
             <button
               onClick={llamarGemini}
               disabled={loadingGemini}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-xs text-gray-600 hover:text-gray-600 transition-colors"
             >
               ↻ Regenerar
             </button>
@@ -211,13 +211,13 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
         </div>
 
         {!gemini && !loadingGemini && !geminiError && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-600">
             Haz click en "Generar análisis" para obtener un diagnóstico detallado con IA.
           </p>
         )}
 
         {loadingGemini && (
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-gray-600">
             <div className="w-3 h-3 border border-blue-400 border-t-transparent
                             rounded-full animate-spin" />
             Analizando con Gemini...
@@ -236,7 +236,7 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
 
             {gemini.causas?.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1.5">Posibles causas</p>
+                <p className="text-xs font-medium text-gray-700 mb-1.5">Posibles causas</p>
                 <ul className="space-y-1">
                   {gemini.causas.map((c, i) => (
                     <li key={i} className="flex gap-2 text-xs text-gray-600">
@@ -250,7 +250,7 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
 
             {gemini.acciones?.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-1.5">Acciones recomendadas</p>
+                <p className="text-xs font-medium text-gray-700 mb-1.5">Acciones recomendadas</p>
                 <ul className="space-y-1">
                   {gemini.acciones.map((a, i) => (
                     <li key={i} className="flex gap-2 text-xs text-gray-600">
@@ -278,7 +278,7 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
         </div>
 
         {recs.length === 0 ? (
-          <p className="text-xs text-gray-400">No hay recomendaciones para esta alerta.</p>
+          <p className="text-xs text-gray-600">No hay recomendaciones para esta alerta.</p>
         ) : (
           <div className="space-y-3">
             {recs.map((rec) => (
@@ -297,10 +297,10 @@ function DetalleAlerta({ alerta, onVolver, onResuelta }) {
                       disabled={aplicandoId === rec.recomendacion_id}
                       className={`text-xs px-2 py-1 rounded shrink-0 transition-all duration-200 ${
                         aplicandoId === rec.recomendacion_id
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
                           : rec.aplicada
                           ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
                       }`}
                     >
                       {aplicandoId === rec.recomendacion_id
@@ -406,18 +406,20 @@ export default function Alertas() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Alertas</h1>
-            <p className="text-xs text-gray-400 mt-0.5">{alertas.length} alertas</p>
+            <p className="text-xs text-gray-600 mt-0.5">{alertas.length} alertas</p>
           </div>
           {/* Filtros */}
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1" aria-label="Filtrar alertas">
             {['pendientes', 'todas', 'resueltas'].map(f => (
               <button
                 key={f}
+                type="button"
                 onClick={() => setFiltro(f)}
+                aria-pressed={filtro === f}
                 className={`text-xs px-3 py-1.5 rounded-md transition-colors capitalize ${
                   filtro === f
                     ? 'bg-white text-gray-900 shadow-sm font-medium'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-700 hover:text-gray-700'
                 }`}
               >
                 {f}
@@ -427,10 +429,10 @@ export default function Alertas() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-400">Cargando...</p>
+          <p className="text-sm text-gray-600">Cargando...</p>
         ) : alertas.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-200 rounded-xl">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-600">
               {filtro === 'pendientes' ? 'No hay alertas pendientes' : 'No hay alertas'}
             </p>
           </div>
@@ -438,12 +440,12 @@ export default function Alertas() {
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-gray-50 text-xs text-gray-400 font-medium">
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Mensaje</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Severidad</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Detectada</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Estado</th>
-                  <th className="px-4 py-3 border-b border-gray-200 w-20"></th>
+                <tr className="bg-gray-50 text-xs text-gray-700 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Mensaje</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Severidad</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Detectada</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Estado</th>
+                  <th scope="col" className="px-4 py-3 border-b border-gray-200 w-20"></th>
                 </tr>
               </thead>
               <tbody>
@@ -458,13 +460,13 @@ export default function Alertas() {
                     <td className="px-4 py-3">
                       <BadgeSeveridad severidad={a.severidad} />
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">
+                    <td className="px-4 py-3 text-gray-600 text-xs">
                       {tiempoRelativo(a.timestamp)}
                     </td>
                     <td className="px-4 py-3">
                       {a.resuelta
                         ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">resuelta</span>
-                        : <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">pendiente</span>
+                        : <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">pendiente</span>
                       }
                     </td>
                     <td className="px-4 py-3 text-right">

@@ -33,7 +33,7 @@ function BarraMetrica({ valor, umbral = 85 }) {
           style={{ width: `${Math.min(valor, 100)}%` }}
         />
       </div>
-      <span className="text-xs text-gray-500 w-8 text-right">{valor?.toFixed(0)}%</span>
+      <span className="text-xs text-gray-700 w-8 text-right">{valor?.toFixed(0)}%</span>
     </div>
   )
 }
@@ -96,7 +96,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+        <div className="flex items-center justify-center h-full text-gray-600 text-sm">
           Cargando...
         </div>
       </Layout>
@@ -111,7 +111,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Dashboard</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               Actualización automática cada 30s
             </p>
           </div>
@@ -127,26 +127,26 @@ export default function Dashboard() {
         {/* Tarjetas resumen */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-xs text-gray-400 mb-1">Sistemas activos</p>
+            <p className="text-xs text-gray-600 mb-1">Sistemas activos</p>
             <p className="text-2xl font-medium text-gray-900">{sistemasOk}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-xs text-gray-400 mb-1">Total sistemas</p>
+            <p className="text-xs text-gray-600 mb-1">Total sistemas</p>
             <p className="text-2xl font-medium text-gray-900">{totalSistemas}</p>
           </div>
           <div className={`rounded-lg p-4 ${alertas.length > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
-            <p className={`text-xs mb-1 ${alertas.length > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+            <p className={`text-xs mb-1 ${alertas.length > 0 ? 'text-amber-700' : 'text-gray-600'}`}>
               Alertas activas
             </p>
-            <p className={`text-2xl font-medium ${alertas.length > 0 ? 'text-amber-800' : 'text-gray-900'}`}>
+            <p className={`text-2xl font-medium ${alertas.length > 0 ? 'text-amber-900' : 'text-gray-900'}`}>
               {alertas.length}
             </p>
           </div>
           <div className={`rounded-lg p-4 ${alertasCriticas > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-            <p className={`text-xs mb-1 ${alertasCriticas > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+            <p className={`text-xs mb-1 ${alertasCriticas > 0 ? 'text-red-700' : 'text-gray-600'}`}>
               Críticas
             </p>
-            <p className={`text-2xl font-medium ${alertasCriticas > 0 ? 'text-red-800' : 'text-gray-900'}`}>
+            <p className={`text-2xl font-medium ${alertasCriticas > 0 ? 'text-red-900' : 'text-gray-900'}`}>
               {alertasCriticas}
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function Dashboard() {
             </div>
 
             {sistemas.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-6">
+              <p className="text-sm text-gray-600 text-center py-6">
                 No hay sistemas registrados
               </p>
             ) : (
@@ -197,10 +197,10 @@ export default function Dashboard() {
                             <BarraMetrica valor={snap.ram_percent} />
                           </div>
                         ) : (
-                          <p className="text-xs text-gray-400">Sin datos</p>
+                          <p className="text-xs text-gray-600">Sin datos</p>
                         )}
                       </div>
-                      <span className="text-xs text-gray-400 shrink-0">
+                      <span className="text-xs text-gray-600 shrink-0">
                         {s.ultimo_contacto
                           ? tiempoRelativo(s.ultimo_contacto)
                           : 'nunca'
@@ -227,7 +227,7 @@ export default function Dashboard() {
 
             {alertas.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-sm text-gray-400">Sin alertas activas</p>
+                <p className="text-sm text-gray-600">Sin alertas activas</p>
                 <p className="text-xs text-gray-300 mt-1">El sistema funciona correctamente</p>
               </div>
             ) : (
@@ -244,7 +244,7 @@ export default function Dashboard() {
                       </p>
                       <BadgeSeveridad severidad={a.severidad} />
                     </div>
-                    <p className="text-xs text-gray-400">{tiempoRelativo(a.timestamp)}</p>
+                    <p className="text-xs text-gray-600">{tiempoRelativo(a.timestamp)}</p>
                   </div>
                 ))}
               </div>
@@ -253,7 +253,7 @@ export default function Dashboard() {
             {alertas.length > 0 && (
               <button
                 onClick={() => navigate('/alertas')}
-                className="w-full mt-3 text-xs text-gray-500 border border-gray-200
+                className="w-full mt-3 text-xs text-gray-700 border border-gray-200
                            rounded-lg py-2 hover:bg-gray-50 transition-colors"
               >
                 Ver todas las alertas

@@ -24,7 +24,7 @@ function BadgeTipo({ tipo }) {
     agente_caido:  'bg-gray-100 text-gray-600',
   }
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[tipo] || 'bg-gray-100 text-gray-500'}`}>
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${styles[tipo] || 'bg-gray-100 text-gray-700'}`}>
       {tipo}
     </span>
   )
@@ -101,7 +101,7 @@ export default function Eventos() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Eventos</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 mt-0.5">
               Historial de eventos recibidos por el sistema
             </p>
           </div>
@@ -126,7 +126,7 @@ export default function Eventos() {
               className={`text-xs px-4 py-1.5 rounded-md transition-colors ${
                 tab === t.key
                   ? 'bg-white text-gray-900 shadow-sm font-medium'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-700 hover:text-gray-700'
               }`}
             >
               {t.label}
@@ -136,9 +136,12 @@ export default function Eventos() {
 
         {/* Filtros */}
         <div className="flex gap-3 mb-4">
+          <label className="sr-only" htmlFor="filtro-eventos-tipo">Filtrar por tipo</label>
           <select
+            id="filtro-eventos-tipo"
             value={filtroTipo}
             onChange={e => setFiltroTipo(e.target.value)}
+            aria-label="Filtrar eventos por tipo"
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs
                        focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
           >
@@ -148,39 +151,44 @@ export default function Eventos() {
           </select>
 
           {tab === 'sistema' && (
-            <select
-              value={filtroSistema}
-              onChange={e => setFiltroSistema(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
-            >
-              <option value="">Todos los sistemas</option>
-              {sistemas.map(s => (
-                <option key={s.id} value={s.id}>{s.nombre}</option>
-              ))}
-            </select>
+            <>
+              <label className="sr-only" htmlFor="filtro-eventos-sistema">Filtrar por sistema</label>
+              <select
+                id="filtro-eventos-sistema"
+                value={filtroSistema}
+                onChange={e => setFiltroSistema(e.target.value)}
+                aria-label="Filtrar eventos por sistema"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              >
+                <option value="">Todos los sistemas</option>
+                {sistemas.map(s => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+            </>
           )}
 
           {(filtroTipo || filtroSistema) && (
             <button
               onClick={() => { setFiltroTipo(''); setFiltroSistema('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 px-2"
+              className="text-xs text-gray-600 hover:text-gray-600 px-2"
             >
               ✕ Limpiar filtros
             </button>
           )}
 
-          <span className="text-xs text-gray-400 self-center ml-auto">
+          <span className="text-xs text-gray-600 self-center ml-auto">
             {eventosFiltrados.length} eventos
           </span>
         </div>
 
         {/* Tabla */}
         {loading ? (
-          <p className="text-sm text-gray-400">Cargando...</p>
+          <p className="text-sm text-gray-600">Cargando...</p>
         ) : eventosFiltrados.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-gray-200 rounded-xl">
-            <p className="text-sm text-gray-400">No hay eventos</p>
+            <p className="text-sm text-gray-600">No hay eventos</p>
             <p className="text-xs text-gray-300 mt-1">
               Los eventos aparecen aquí cuando el agente los envía
             </p>
@@ -189,17 +197,17 @@ export default function Eventos() {
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-gray-50 text-xs text-gray-400 font-medium">
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Tipo</th>
+                <tr className="bg-gray-50 text-xs text-gray-700 font-medium">
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Tipo</th>
                   {tab === 'sistema' && (
-                    <th className="text-left px-4 py-3 border-b border-gray-200">Sistema</th>
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Sistema</th>
                   )}
                   {tab === 'web' && (
-                    <th className="text-left px-4 py-3 border-b border-gray-200">URL</th>
+                    <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">URL</th>
                   )}
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Valor</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Origen</th>
-                  <th className="text-left px-4 py-3 border-b border-gray-200">Fecha</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Valor</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Origen</th>
+                  <th scope="col" className="text-left px-4 py-3 border-b border-gray-200">Fecha</th>
                 </tr>
               </thead>
               <tbody>
@@ -235,8 +243,8 @@ export default function Eventos() {
                         )
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">{e.origen || '—'}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs" title={formatFecha(e.timestamp)}>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{e.origen || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs" title={formatFecha(e.timestamp)}>
                       {tiempoRelativo(e.timestamp)}
                     </td>
                   </tr>

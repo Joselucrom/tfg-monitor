@@ -85,7 +85,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4" aria-label="Inicio de sesión">
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 w-full max-w-sm">
 
         {/* Logo */}
@@ -101,14 +101,15 @@ export default function Login() {
         </div>
 
         {/* Toggle login/registro */}
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6" aria-label="Selector de modo de acceso">
           <button
             type="button"
             onClick={() => cambiarModo('login')}
+            aria-pressed={modo === 'login'}
             className={`flex-1 text-sm py-1.5 rounded-md transition-colors ${
               modo === 'login'
                 ? 'bg-white text-gray-900 shadow-sm font-medium'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-700 hover:text-gray-700'
             }`}
           >
             Iniciar sesión
@@ -116,10 +117,11 @@ export default function Login() {
           <button
             type="button"
             onClick={() => cambiarModo('registro')}
+            aria-pressed={modo === 'registro'}
             className={`flex-1 text-sm py-1.5 rounded-md transition-colors ${
               modo === 'registro'
                 ? 'bg-white text-gray-900 shadow-sm font-medium'
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-700 hover:text-gray-700'
             }`}
           >
             Crear cuenta
@@ -134,13 +136,14 @@ export default function Login() {
         )}
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" aria-label="Formulario de acceso">
 
           {/* Campo nombre — solo en registro */}
           {modo === 'registro' && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Nombre *</label>
+              <label htmlFor="nombre-registro" className="block text-xs text-gray-700 mb-1">Nombre *</label>
               <input
+                id="nombre-registro"
                 type="text"
                 value={nombre}
                 onChange={e => setNombre(e.target.value)}
@@ -153,10 +156,11 @@ export default function Login() {
           )}
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label htmlFor="email-login" className="block text-xs text-gray-700 mb-1">
               Correo electrónico
             </label>
             <input
+              id="email-login"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -168,8 +172,9 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
+            <label htmlFor="password-login" className="block text-xs text-gray-700 mb-1">Contraseña</label>
             <input
+              id="password-login"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -183,8 +188,9 @@ export default function Login() {
           {/* Campo rol — solo en registro */}
           {modo === 'registro' && (
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Rol</label>
+              <label htmlFor="rol-registro" className="block text-xs text-gray-700 mb-1">Rol</label>
               <select
+                id="rol-registro"
                 value={rol}
                 onChange={e => setRol(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
@@ -193,7 +199,7 @@ export default function Login() {
                 <option value="operador">Operador</option>
                 <option value="admin">Administrador</option>
               </select>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 El rol Admin solo está disponible si no existe ningún administrador previo.
               </p>
             </div>
@@ -212,13 +218,13 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-gray-600 mt-6">
           {modo === 'login'
             ? '¿Problemas para acceder? Contacta con el administrador'
             : 'Al crear una cuenta aceptas las condiciones de uso de la plataforma'
           }
         </p>
       </div>
-    </div>
+    </main>
   )
 }

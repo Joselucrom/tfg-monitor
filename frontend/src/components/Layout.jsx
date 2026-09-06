@@ -58,7 +58,7 @@ export default function Layout({ children }) {
                 `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
                  ${isActive
                    ? 'bg-white text-gray-900 font-medium shadow-sm'
-                   : 'text-gray-500 hover:bg-white hover:text-gray-800'
+                     : 'text-gray-700 hover:bg-white hover:text-gray-800'
                  }`
               }
             >
@@ -71,7 +71,7 @@ export default function Layout({ children }) {
           {isAdmin && (
             <>
               <div className="h-px bg-gray-200 my-2" />
-              <p className="text-xs text-gray-400 px-3 pb-1 uppercase tracking-wide">
+              <p className="text-xs text-gray-600 px-3 pb-1 uppercase tracking-wide">
                 Admin
               </p>
               <NavLink
@@ -80,7 +80,7 @@ export default function Layout({ children }) {
                   `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
                    ${isActive
                      ? 'bg-white text-gray-900 font-medium shadow-sm'
-                     : 'text-gray-500 hover:bg-white hover:text-gray-800'
+                    : 'text-gray-700 hover:bg-white hover:text-gray-800'
                    }`
                 }
               >
@@ -104,13 +104,13 @@ export default function Layout({ children }) {
             </div>
             <div className="min-w-0 text-left">
               <p className="text-xs font-medium text-gray-800 truncate">{user?.nombre}</p>
-              <p className="text-xs text-gray-400 truncate">{user?.rol}</p>
+              <p className="text-xs text-gray-600 truncate">{user?.rol}</p>
             </div>
           </button>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm
-                       text-gray-500 hover:bg-white hover:text-gray-800 transition-colors"
+                       text-gray-700 hover:bg-white hover:text-gray-800 transition-colors"
           >
             <LogOut size={14} />
             Cerrar sesión
