@@ -22,6 +22,87 @@ const COLORES_SISTEMAS = [
   '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
 ]
 
+function hexToRgb(hex) {
+  const h = hex.replace('#', '')
+  const bigint = parseInt(h, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return { r, g, b }
+}
+
+function srgbToLinear(c) {
+  const cs = c / 255
+  return cs <= 0.03928 ? cs / 12.92 : Math.pow((cs + 0.055) / 1.055, 2.4)
+}
+
+function relativeLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  const R = srgbToLinear(r)
+  const G = srgbToLinear(g)
+  const B = srgbToLinear(b)
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B
+}
+
+function contrastRatio(hex1, hex2) {
+  const L1 = relativeLuminance(hex1)
+  const L2 = relativeLuminance(hex2)
+  const lighter = Math.max(L1, L2)
+  const darker = Math.min(L1, L2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+function getBestTextColor(backgroundHex) {
+  if (!backgroundHex) return '#111827' // tailwind gray-900 fallback
+  const white = '#ffffff'
+  const black = '#111827'
+  const contrastWithWhite = contrastRatio(backgroundHex, white)
+  const contrastWithBlack = contrastRatio(backgroundHex, black)
+  return contrastWithWhite >= contrastWithBlack ? white : black
+}
+
+function darkenHex(hex, percent) {
+  const { r, g, b } = hexToRgb(hex)
+  const factor = 1 - percent
+  const nr = Math.max(0, Math.round(r * factor))
+  const ng = Math.max(0, Math.round(g * factor))
+  const nb = Math.max(0, Math.round(b * factor))
+  const toHex = n => n.toString(16).padStart(2, '0')
+  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`
+}
+
+function getAccessibleTextColor(backgroundHex, minContrast = 4.5) {
+  if (!backgroundHex) return { textColor: '#111827', background: backgroundHex }
+  const white = '#ffffff'
+  const black = '#111827'
+
+  const contrastWithWhite = contrastRatio(backgroundHex, white)
+  const contrastWithBlack = contrastRatio(backgroundHex, black)
+
+  // If either meets threshold, pick the best one
+  if (contrastWithWhite >= minContrast || contrastWithBlack >= minContrast) {
+    const pick = contrastWithWhite >= contrastWithBlack ? white : black
+    return { textColor: pick, background: backgroundHex }
+  }
+
+  // Try darkening the background progressively to reach the threshold
+  for (let p = 0.1; p <= 0.6; p += 0.1) {
+    const darker = darkenHex(backgroundHex, p)
+    const cWhite = contrastRatio(darker, white)
+    const cBlack = contrastRatio(darker, black)
+    if (cWhite >= minContrast || cBlack >= minContrast) {
+      const pick = cWhite >= cBlack ? white : black
+      return { textColor: pick, background: darker }
+    }
+  }
+
+  // Fallback: devuelve el que tenga mayor contraste aunque sea insuficiente
+  return {
+    textColor: contrastWithWhite >= contrastWithBlack ? white : black,
+    background: backgroundHex,
+  }
+}
+
 function formatHora(timestamp) {
   return new Date(timestamp).toLocaleTimeString('es-ES', {
     hour:   '2-digit',
@@ -80,20 +161,26 @@ export function GraficaSistema({ sistemaId, nombreSistema }) {
         <div className="flex items-center gap-3">
           {/* Toggle métricas */}
           <div className="flex gap-2">
-            {Object.entries(metricas).map(([key, activa]) => (
-              <button
-                key={key}
-                onClick={() => setMetricas(m => ({ ...m, [key]: !m[key] }))}
-                className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                  activa
-                    ? 'text-white border-transparent'
-                    : 'bg-white text-gray-600 border-gray-200'
-                }`}
-                style={activa ? { backgroundColor: COLORES_METRICAS[key] } : {}}
-              >
-                {key === 'cpu_percent' ? 'CPU' : key === 'ram_percent' ? 'RAM' : 'Disco'}
-              </button>
-            ))}
+            {Object.entries(metricas).map(([key, activa]) => {
+              const originalBg = activa ? COLORES_METRICAS[key] : undefined
+              const { textColor, background: bgAdjusted } = activa
+                ? getAccessibleTextColor(originalBg)
+                : { textColor: undefined, background: undefined }
+              return (
+                <button
+                  key={key}
+                  onClick={() => setMetricas(m => ({ ...m, [key]: !m[key] }))}
+                  className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                    activa
+                      ? 'border-transparent'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                  style={activa ? { backgroundColor: bgAdjusted, color: textColor } : {}}
+                >
+                  {key === 'cpu_percent' ? 'CPU' : key === 'ram_percent' ? 'RAM' : 'Disco'}
+                </button>
+              )
+            })}
           </div>
           {/* Selector de ventana */}
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
