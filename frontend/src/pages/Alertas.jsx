@@ -338,13 +338,14 @@ export default function Alertas() {
   const [alertas,   setAlertas]   = useState([])
   const [loading,   setLoading]   = useState(true)
   const [filtro,    setFiltro]    = useState('pendientes') // pendientes | todas | resueltas
+  const [filtroSeveridad, setFiltroSeveridad] = useState('todas') // todas | critical | warning | info
   const [seleccionada, setSeleccionada] = useState(null)
   const { id } = useParams()
   const navigate = useNavigate()
 
   useEffect(() => {
     cargarAlertas()
-  }, [filtro])
+  }, [filtro, filtroSeveridad])
 
   useEffect(() => {
     if (id) {
@@ -362,6 +363,9 @@ export default function Alertas() {
         url.searchParams.append('resuelta', 'false')
       } else if (filtro === 'resueltas') {
         url.searchParams.append('resuelta', 'true')
+      }
+      if (filtroSeveridad !== 'todas') {
+        url.searchParams.append('severidad', filtroSeveridad)
       }
       url.searchParams.append('limite', '100')
       const { data } = await client.get(listaPath + url.search)
@@ -409,22 +413,41 @@ export default function Alertas() {
             <p className="text-xs text-gray-600 mt-0.5">{alertas.length} alertas</p>
           </div>
           {/* Filtros */}
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1" aria-label="Filtrar alertas">
-            {['pendientes', 'todas', 'resueltas'].map(f => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFiltro(f)}
-                aria-pressed={filtro === f}
-                className={`text-xs px-3 py-1.5 rounded-md transition-colors capitalize ${
-                  filtro === f
-                    ? 'bg-white text-gray-900 shadow-sm font-medium'
-                    : 'text-gray-700 hover:text-gray-700'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1" aria-label="Filtrar alertas por estado">
+              {['pendientes', 'todas', 'resueltas'].map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFiltro(f)}
+                  aria-pressed={filtro === f}
+                  className={`text-xs px-3 py-1.5 rounded-md transition-colors capitalize ${
+                    filtro === f
+                      ? 'bg-white text-gray-900 shadow-sm font-medium'
+                      : 'text-gray-700 hover:text-gray-700'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1" aria-label="Filtrar alertas por severidad">
+              {['todas', 'critical', 'warning', 'info'].map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFiltroSeveridad(s)}
+                  aria-pressed={filtroSeveridad === s}
+                  className={`text-xs px-3 py-1.5 rounded-md transition-colors capitalize ${
+                    filtroSeveridad === s
+                      ? 'bg-white text-gray-900 shadow-sm font-medium'
+                      : 'text-gray-700 hover:text-gray-700'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
