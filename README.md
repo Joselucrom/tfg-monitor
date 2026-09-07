@@ -83,7 +83,7 @@ tfg-monitor/
 **1. Clonar el repositorio**
 
 ```bash
-git clone https://github.com/usuario/tfg-monitor.git
+git clone https://github.com/Joselucrom/tfg-monitor.git
 cd tfg-monitor
 ```
 
