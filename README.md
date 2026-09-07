@@ -28,7 +28,7 @@ TFG Monitor permite supervisar en tiempo real el estado de servidores y servicio
 |------|-----------|
 | Backend | Python 3.11, FastAPI, SQLAlchemy async, asyncpg |
 | Base de datos | PostgreSQL 16 |
-| Frontend | React 18, Tailwind CSS, Vite, Recharts |
+| Frontend | React 19 Tailwind CSS, Vite, Recharts |
 | Agente | Python 3.11, psutil, httpx |
 | IA | Google Gemini API (google-genai) |
 | Despliegue | Docker, Docker Compose, Nginx |
